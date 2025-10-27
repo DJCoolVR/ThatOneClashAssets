@@ -1,0 +1,57 @@
+<html>
+<base href="https://cdn.jsdelivr.net/gh/yourusername/ThatOneClashAssets@main/">
+<head>
+  <title>ThatOneClash</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+  <!--Temporary fix for IOS 9-->
+  <meta name="viewport"
+        content="initial-scale=1.0001, minimum-scale=1.0001,
+                 maximum-scale=1.0001, user-scalable=no, minimal-ui" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+
+  <!-- Your custom files -->
+  <link rel="stylesheet" type="text/css" href="thatoneclash.css">
+  <script type="text/javascript" src="thatoneclash.js"></script>
+
+  <!-- Optional compatibility patch -->
+  <script src="https://s3.amazonaws.com/marketjs-us/en/patch/webaudio-context-patch.js"></script>
+</head>
+
+<body onload="setTimeout(function(){window.scrollTo(0,1)},1);">
+  <div id="ajaxbar">
+    <div id="game"><canvas id="canvas"></canvas></div>
+
+    <div id="orientate">
+      <img src="media/graphics/orientate/landscape.jpg" />
+    </div>
+
+    <div id="play" class="play" onclick="">
+      <img src="media/graphics/splash/mobile/cover-start.jpg" />
+    </div>
+
+    <!-- Example Ad placeholders -->
+    <div id="MobileAdInGamePreroll">
+      <div id="MobileAdInGamePreroll-Box">
+        <a id="MobileAdInGamePreroll-Box-Close"
+           onclick="MobileAdInGamePreroll.Close();"></a>
+        <div id="MobileAdInGamePreroll-Box-Body">
+          <center><img src="https://cdn-factory.marketjs.com/generic.png"></center>
+        </div>
+      </div>
+    </div>
+
+    <!-- End-screen Ad -->
+    <div id="MobileAdInGameEnd">
+      <div id="MobileAdInGameEnd-Box">
+        <a id="MobileAdInGameEnd-Box-Close"
+           onclick="MobileAdInGameEnd.Close();"></a>
+        <div id="MobileAdInGameEnd-Box-Body">
+          <center><!-- custom end ad --></center>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
