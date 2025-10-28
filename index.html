@@ -9,11 +9,19 @@
 <body>
   <h1>ThatOneClash</h1>
   <div id="ui">
-    <div>Elixir: <span id="elixir">0</span>/10</div>
+    <div id="elixir-bar">
+      <div id="elixir-fill"></div>
+      <span id="elixir-text">0 / 10</span>
+    </div>
     <div id="cards"></div>
   </div>
   <canvas id="game"></canvas>
   <div id="win" class="hidden"></div>
+
+  <!-- Sound Effects -->
+  <audio id="spawn-sfx" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3"></audio>
+  <audio id="attack-sfx" src="https://assets.mixkit.co/sfx/preview/mixkit-sword-slash-215.mp3"></audio>
+
   <script src="game.js"></script>
 </body>
 </html>
