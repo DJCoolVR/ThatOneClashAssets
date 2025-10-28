@@ -1,42 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-<base href="https://cdn.jsdelivr.net/gh/DJCoolVR/ThatOneClashAssets@main/">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>ThatOneClash</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="stylesheet" href="thatoneclash.css">
-  <script src="thatoneclash.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <div id="game">
-    <canvas id="canvas"></canvas>
+  <h1>ThatOneClash</h1>
+  <div id="ui">
+    <div>Elixir: <span id="elixir">0</span>/10</div>
+    <div id="cards"></div>
   </div>
-
-  <!-- Loading screen -->
-  <div id="loadingScreen" style="
-    position:fixed;
-    inset:0;
-    background:#0b1020;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    color:white;
-    font-family:sans-serif;
-    z-index:9999;">
-    <h1>Loading ThatOneClash...</h1>
-  </div>
-
-  <script>
-    // Simulated loading screen
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        document.getElementById("loadingScreen").style.display = "none";
-      }, 1500);
-    });
-  </script>
+  <canvas id="game"></canvas>
+  <div id="win" class="hidden"></div>
+  <script src="game.js"></script>
 </body>
 </html>
