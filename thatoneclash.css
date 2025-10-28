@@ -1,47 +1,285 @@
+Below are the two ready-to-upload files for the **Advanced Version** (Clash-like) of ThatOneClash.
+Save each named file into your repo `ThatOneClashAssets` at the root (or update paths in your `index.html`).
+
+---
+
+### File: thatoneclash.css
+
+```css
 :root{
-  --bg:#0b1020;
-  --panel:#0f1724;
-  --accent:#f59e0b;
-  --muted:#94a3b8;
+  --bg:#071028; --panel:#0f1724; --accent:#f59e0b; --muted:#9fb0c8; --card:#0b1226;
 }
-body,html{
-  margin:0;
-  padding:0;
-  font-family:sans-serif;
-  background:var(--bg);
-  color:#e6eef8;
-}
-canvas{
-  display:block;
-  background:linear-gradient(180deg,#0b1226,#071025);
-  margin:auto;
-}
-#elixirBar{
-  position:absolute;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  padding:8px 12px;
-  background:var(--panel);
-  border-radius:8px;
-  font-weight:bold;
-}
-.tower{
-  fill:gray;
-}
-.unit{
-  fill:orange;
-}
-.log{
-  position:absolute;
-  bottom:10px;
-  left:50%;
-  transform:translateX(-50%);
-  background:var(--panel);
-  padding:8px;
-  border-radius:6px;
-  font-size:13px;
-  max-height:120px;
-  overflow:auto;
-  width:90%;
-}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,Arial}
+#game{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.wrapper{width:980px;height:640px;display:grid;grid-template-columns:700px 1fr;gap:12px}
+.board{background:linear-gradient(180deg,#071425,#041027);border-radius:12px;padding:12px;position:relative}
+canvas#battleCanvas{width:100%;height:100%;background:transparent;border-radius:8px;display:block}
+.sidebar{background:var(--panel);border-radius:12px;padding:12px;color:#dceaf8;display:flex;flex-direction:column;gap:10px}
+.elixirBar{height:42px;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:space-between}
+.elixirMeter{height:10px;background:rgba(255,255,255,0.04);border-radius:6px;flex:1;margin-left:8px;overflow:hidden}
+.elixirFill{height:100%;background:linear-gradient(90deg,var(--accent),#ffb86b);width:0%}
+.cardRow{display:flex;gap:8px;align-items:center}
+.card{width:140px;padding:8px;background:linear-gradient(180deg,var(--card),rgba(255,255,255,0.01));border-radius:8px;text-align:center;color:#dbeeff;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+.card.disabled{opacity:0.45;pointer-events:none}
+.card .cost{font-weight:bold;color:var(--accent);}
+.log{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;height:200px;overflow:auto;font-size:13px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.btn{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:600;cursor:pointer}
+.centerHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:48px;color:rgba(255,255,255,0.04);pointer-events:none}
+/* responsive */
+@media(max-width:1000px){.wrapper{width:96vw;height:80vh;grid-template-columns:1fr 1fr}}
+```
+
+---
+
+### File: thatoneclash.js
+
+```javascript
+// ThatOneClash - Advanced (Clash-like) v1
+// Drop this file at the repo root and ensure index.html references it.
+
+(function(){
+  // --- DOM setup ---
+  const root = document.getElementById('game');
+  root.innerHTML = `
+    <div class="wrapper">
+      <div class="board">
+        <canvas id="battleCanvas" width="700" height="600"></canvas>
+        <div class="centerHint">THATONECLASH</div>
+      </div>
+      <div class="sidebar">
+        <div class="topbar"><div>Arena: <strong id="arenaLabel">1</strong></div><button id="nextArena" class="btn">Next Arena</button></div>
+        <div class="elixirBar">Elixir <div class="elixirMeter"><div id="elixirFill" class="elixirFill"></div></div><div id="elixirLabel">0</div></div>
+        <div id="cardRow" class="cardRow"></div>
+        <div class="log" id="battleLog"></div>
+        <div style="display:flex;gap:8px"><button id="resetBtn" class="btn">Reset</button><button id="instructionsBtn" class="btn">Instructions</button></div>
+      </div>
+    </div>
+  `;
+
+  // --- Canvas & context ---
+  const canvas = document.getElementById('battleCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // --- Game constants ---
+  let arena = 1;
+  const maxElixir = 10;
+  let elixir = 4; // start with some elixir
+  const elixirRegenRate = 0.03; // per frame (~60fps)
+
+  // Towers: two per side (arena + king)
+  const towers = {
+    playerArena: {x:100,y:H/2-60,w:60,h:120,hp:250,maxHp:250,side:'player'},
+    playerKing:  {x:220,y:H/2-100,w:80,h:200,hp:400,maxHp:400,side:'player'},
+    enemyArena:  {x:W-160,y:H/2-60,w:60,h:120,hp:250,maxHp:250,side:'enemy'},
+    enemyKing:   {x:W-320,y:H/2-100,w:80,h:200,hp:400,maxHp:400,side:'enemy'}
+  };
+
+  // Card definitions (unlock by arena)
+  const ALL_CARDS = [
+    {id:'tiny_knight', name:'Tiny Knight', cost:3, hp:60, dmg:14, speed:0.9, type:'melee', unlock:1},
+    {id:'pebble', name:'Pebble Thrower', cost:4, hp:40, dmg:10, speed:0.6, range:120, type:'ranged', unlock:2},
+    {id:'spear', name:'Speardude', cost:4, hp:70, dmg:16, speed:0.7, type:'melee', unlock:3},
+    {id:'hothead', name:'Hothead', cost:5, hp:80, dmg:20, speed:0.7, type:'melee', selfBurn:true, unlock:4},
+    {id:'snowmage', name:'Snowmage', cost:4, hp:45, dmg:8, speed:0.5, slow:0.5, range:140, type:'ranged', unlock:5},
+    {id:'scrapbot', name:'Scrapbot', cost:6, hp:100, dmg:18, speed:0.5, deathBlast:20, unlock:6},
+    {id:'feather', name:'Feather Archer', cost:4, hp:40, dmg:12, speed:0.95, range:140, type:'ranged', unlock:7},
+    {id:'sneakrat', name:'Sneakrat', cost:5, hp:50, dmg:18, speed:1.1, stealth:true, unlock:8},
+    {id:'golem', name:'Gem Golem', cost:7, hp:180, dmg:28, speed:0.45, unlock:9},
+    {id:'budget_king', name:'Budget King', cost:8, hp:150, dmg:22, speed:0.6, spawnOnDeath:'tiny_knight', unlock:10}
+  ];
+
+  // Player deck (4-card hand drawn from available cards up to current arena)
+  let deckPool = [];
+  let hand = [];
+
+  function updateDeckPool(){ deckPool = ALL_CARDS.filter(c=>c.unlock<=arena); }
+  function drawInitialHand(){ hand = []; shuffle(deckPool); for(let i=0;i<4;i++){ hand.push(deckPool[i % deckPool.length]); } }
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } }
+
+  // Units on field
+  let units = []; // {x,y,side,hp,dmg,speed,cardId,range}
+
+  // --- UI elements ---
+  const cardRow = document.getElementById('cardRow');
+  const elixirFill = document.getElementById('elixirFill');
+  const elixirLabel = document.getElementById('elixirLabel');
+  const arenaLabel = document.getElementById('arenaLabel');
+  const nextArenaBtn = document.getElementById('nextArena');
+  const logBox = document.getElementById('battleLog');
+  const resetBtn = document.getElementById('resetBtn');
+  const instructionsBtn = document.getElementById('instructionsBtn');
+
+  function log(msg){ const d=document.createElement('div'); d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; logBox.prepend(d); }
+
+  nextArenaBtn.onclick = ()=>{ if(arena<10) arena++; arenaLabel.textContent = arena; initCards(); log('Advanced to Arena '+arena); };
+  resetBtn.onclick = ()=>{ resetGame(); log('Game reset'); };
+  instructionsBtn.onclick = ()=>{ alert('Click a card then click on your side of the battlefield to deploy. Elixir regenerates. Destroy enemy king to win.'); };
+
+  // Build cards UI
+  function initCards(){ updateDeckPool(); drawInitialHand(); renderHand(); }
+  function renderHand(){ cardRow.innerHTML = ''; hand.forEach((c,idx)=>{
+    const div = document.createElement('div'); div.className='card'; div.dataset.index=idx;
+    div.innerHTML = `<div style="font-weight:700">${c.name}</div><div class="cost">Cost: ${c.cost}</div><div style="font-size:12px;margin-top:6px">${c.unlock<=arena?c.desc||'':'Locked'}</div>`;
+    if(c.unlock>arena) div.classList.add('disabled');
+    div.onclick = ()=>{ if(c.unlock>arena) return; selectCard(idx); };
+    cardRow.appendChild(div);
+  }); }
+
+  let selectedCardIndex = null;
+  function selectCard(i){ selectedCardIndex = i; // highlight (quick)
+    Array.from(cardRow.children).forEach((el,idx)=>el.style.outline = idx===i? '2px solid '+getComputedStyle(document.documentElement).getPropertyValue('--accent') : 'none'); }
+
+  // Deploy process: after card selected, click on left half to spawn
+  canvas.addEventListener('click', (ev)=>{
+    if(selectedCardIndex===null) return;
+    const rect = canvas.getBoundingClientRect(); const x = (ev.clientX-rect.left)*(canvas.width/rect.width); const y = (ev.clientY-rect.top)*(canvas.height/rect.height);
+    if(x > W/2) { log('You can only deploy on your side'); return; }
+    const card = hand[selectedCardIndex];
+    if(elixir < card.cost){ log('Not enough Elixir'); return; }
+    elixir -= card.cost; refreshElixirUI();
+    spawnUnitFromCard(card, 'player', x, y);
+    // replace card with new one from pool
+    hand[selectedCardIndex] = deckPool[Math.floor(Math.random()*deckPool.length)];
+    renderHand(); selectedCardIndex = null;
+  });
+
+  function spawnUnitFromCard(card, side, x, y){ const u = {
+    x: side==='player' ? (x||120) : (x||W-120),
+    y: y || H/2,
+    side: side,
+    hp: card.hp || 60,
+    maxHp: card.hp || 60,
+    dmg: card.dmg || 10,
+    spd: card.speed || 0.7,
+    range: card.range || 18,
+    cardId: card.id
+  };
+    units.push(u); log((side==='player'?'You':'Enemy')+' deployed '+card.name);
+  }
+
+  // Enemy AI: spawn random card from pool every few seconds
+  let enemySpawnTimer = 0;
+
+  // Reset / init
+  function resetGame(){
+    elixir=4; refreshElixirUI(); units=[]; Object.values(towers).forEach(t=>{ t.hp = t.maxHp; }); arena = 1; arenaLabel.textContent = arena; updateDeckPool(); drawInitialHand(); renderHand(); log('Game initialized');
+  }
+
+  function refreshElixirUI(){ elixirFill.style.width = Math.min(100, (elixir/maxElixir*100)) + '%'; elixirLabel.textContent = Math.floor(elixir); }
+
+  // Collision / combat helpers
+  function distance(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  // Game loop
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.06, (now-last)/1000); last = now;
+    // regenerate elixir
+    if(elixir < maxElixir) elixir += elixirRegenRate / (1/dt); // scaled to dt
+    if(elixir>maxElixir) elixir = maxElixir; refreshElixirUI();
+
+    // enemy spawn timer
+    enemySpawnTimer += dt;
+    if(enemySpawnTimer > 2.0){ enemySpawnTimer = 0; const c = deckPool[Math.floor(Math.random()*deckPool.length)]; spawnUnitFromCard(c,'enemy', W-120, H/2 + (Math.random()-0.5)*120); }
+
+    // update units: move towards nearest enemy unit or enemy tower
+    for(let u of units){
+      // find nearest hostile unit
+      const enemies = units.filter(v=>v.side !== u.side);
+      let target = null;
+      if(enemies.length) {
+        // pick nearest enemy
+        enemies.sort((a,b)=>distance(u,a)-distance(u,b)); target = enemies[0];
+      } else {
+        // target enemy tower (choose nearest tower on enemy side)
+        const enemyTowers = Object.values(towers).filter(t=>t.side !== u.side);
+        enemyTowers.sort((a,b)=> Math.hypot(u.x-a.x,u.y-a.y) - Math.hypot(u.x-b.x,u.y-b.y));
+        target = enemyTowers[0];
+      }
+
+      // move towards target if not in range
+      const dx = (target.x || target.x) - u.x;
+      const dy = (target.y || target.y) - u.y;
+      const dist = Math.hypot(dx,dy) || 1;
+      if(dist > (u.range||18) + (target.w? target.w/2 : 0)){
+        u.x += (dx/dist) * u.spd;
+        u.y += (dy/dist) * u.spd;
+      } else {
+        // attack
+        if(target.hp !== undefined){ // tower
+          target.hp -= u.dmg * dt * 30; // scaled
+          if(target.hp <= 0){ target.hp = 0; log(`${u.side==='player'?'You':'Enemy'} destroyed a tower!`); checkVictory(); }
+        } else { // unit
+          target.hp -= u.dmg * dt * 30;
+          if(target.hp <= 0){ target.hp = 0; }
+        }
+      }
+    }
+
+    // cleanup dead units (spawn death effects)
+    const dead = units.filter(u=>u.hp<=0);
+    for(let d of dead){
+      // handle special death spawns (budget king)
+      const cardDef = ALL_CARDS.find(c=>c.id===d.cardId);
+      if(cardDef && cardDef.spawnOnDeath){
+        const spawnDef = ALL_CARDS.find(c=>c.id===cardDef.spawnOnDeath);
+        if(spawnDef) spawnUnitFromCard(spawnDef, d.side, d.x, d.y);
+      }
+    }
+    units = units.filter(u=>u.hp>0);
+
+    // draw
+    render();
+
+    requestAnimationFrame(loop);
+  }
+
+  function checkVictory(){ if(towers.enemyKing.hp<=0){ alert('Victory! Enemy King destroyed'); resetGame(); } if(towers.playerKing.hp<=0){ alert('Defeat! Your King was destroyed'); resetGame(); } }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    // ground lane
+    ctx.fillStyle = '#071323'; ctx.fillRect(0,H/2-120,W,240);
+
+    // draw towers
+    function drawTower(t){
+      ctx.fillStyle = t.side==='player' ? '#1f6feb' : '#d43f3f';
+      ctx.fillRect(t.x,t.y,t.w,t.h);
+      // hp bar
+      const pct = Math.max(0,t.hp/t.maxHp);
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(t.x, t.y-12, t.w, 8);
+      ctx.fillStyle = '#2fd27a'; ctx.fillRect(t.x, t.y-12, t.w * pct, 8);
+    }
+    drawTower(towers.playerArena); drawTower(towers.playerKing); drawTower(towers.enemyArena); drawTower(towers.enemyKing);
+
+    // draw units
+    for(let u of units){
+      ctx.save(); ctx.translate(u.x,u.y);
+      ctx.fillStyle = u.side==='player' ? '#8ad6ff' : '#ffb3b3';
+      ctx.fillRect(-12,-12,24,24);
+      // hp bar
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(-12,-18,24,4);
+      ctx.fillStyle='#2fd27a'; ctx.fillRect(-12,-18,24 * (u.hp/u.maxHp),4);
+      ctx.restore();
+    }
+  }
+
+  // init
+  updateDeckPool(); drawInitialHand(); initCards(); refreshElixirUI(); resetGame(); requestAnimationFrame(loop);
+
+})();
+```
+
+---
+
+Upload `thatoneclash.css` and `thatoneclash.js` to your repo root and ensure `index.html`'s `<base>` points to `https://cdn.jsdelivr.net/gh/DJCoolVR/ThatOneClashAssets@main/` and loads `thatoneclash.css` and `thatoneclash.js`.
+
+If you want, I can now:
+• Tweak balance (cost/hp/dmg) to feel more like Clash Royale, or
+• Add more UI polish (card cooldown animation, deploy targeting, tower target indicators), or
+• Generate small placeholder art for the cards/towers.
+
+Which polish would you like next?
