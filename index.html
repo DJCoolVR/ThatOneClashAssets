@@ -7,20 +7,23 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>ThatOneClash</h1>
-  <div id="ui">
+  <!-- Start Menu -->
+  <div id="start-menu">
+    <div class="logo">👑</div>
+    <h1>ThatOneClash</h1>
+    <button id="play-btn">BATTLE!</button>
+  </div>
+
+  <!-- Game UI -->
+  <div id="ui" class="hidden">
     <div id="elixir-bar">
       <div id="elixir-fill"></div>
-      <span id="elixir-text">0 / 10</span>
     </div>
     <div id="cards"></div>
   </div>
+
   <canvas id="game"></canvas>
   <div id="win" class="hidden"></div>
-
-  <!-- Sound Effects -->
-  <audio id="spawn-sfx" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3"></audio>
-  <audio id="attack-sfx" src="https://assets.mixkit.co/sfx/preview/mixkit-sword-slash-215.mp3"></audio>
 
   <script src="game.js"></script>
 </body>
