@@ -1,32 +1,42 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <base href="https://cdn.jsdelivr.net/gh/DJCoolVR/ThatOneClashAssets@main/">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ThatOneClash</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
-
-  <!--Temporary fix for IOS 9-->
-  <meta name="viewport"
-        content="initial-scale=1.0001, minimum-scale=1.0001,
-                 maximum-scale=1.0001, user-scalable=no, minimal-ui" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-
-  <!-- Your custom files -->
-  <link rel="stylesheet" type="text/css" href="thatoneclash.css">
-  <script type="text/javascript" src="thatoneclash.js"></script>
-
-  <!-- Optional compatibility patch -->
-  <script src="https://s3.amazonaws.com/marketjs-us/en/patch/webaudio-context-patch.js"></script>
+  <link rel="stylesheet" href="thatoneclash.css">
+  <script src="thatoneclash.js" defer></script>
 </head>
 
-<body onload="setTimeout(function(){window.scrollTo(0,1)},1);">
-  <div id="ajaxbar">
-    <div id="game"><canvas id="canvas"></canvas></div>
+<body>
+  <div id="game">
+    <canvas id="canvas"></canvas>
+  </div>
 
-    <div id="orientate">
-      <img src="media/graphics/orientate/landscape.jpg" />
-    </div>
+  <!-- Loading screen -->
+  <div id="loadingScreen" style="
+    position:fixed;
+    inset:0;
+    background:#0b1020;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    color:white;
+    font-family:sans-serif;
+    z-index:9999;">
+    <h1>Loading ThatOneClash...</h1>
+  </div>
 
-    <div id="play" class="play" onclick="">
-      <img src="media/graphics/splash/mobile/cover-start.jpg" />
-    </div>
+  <script>
+    // Simulated loading screen
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        document.getElementById("loadingScreen").style.display = "none";
+      }, 1500);
+    });
+  </script>
+</body>
+</html>
