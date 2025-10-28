@@ -1,0 +1,26 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #2c3e50; color: #fff; font-family: Arial; text-align: center; }
+h1 { margin: 1rem; }
+
+#ui {
+  display: flex; justify-content: space-between; padding: 0.5rem 1rem;
+  background: #34495e;
+}
+#cards { display: flex; gap: 10px; }
+.card {
+  width: 70px; height: 100px; background: #7f8c8d; border: 2px solid #95a5a6;
+  border-radius: 8px; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; cursor: pointer;
+  font-size: 0.8rem; transition: 0.1s;
+}
+.card:hover { background: #bdc3c7; }
+.card:disabled { opacity: 0.4; cursor: not-allowed; }
+.card .cost { margin-top: 4px; font-weight: bold; }
+
+#game { display: block; margin: 1rem auto; background: #8b5a2b; }
+#win {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.8); padding: 2rem 4rem; font-size: 2.5rem;
+  border-radius: 12px; display: none;
+}
+.hidden { display: none; }
