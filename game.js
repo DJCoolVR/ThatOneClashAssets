@@ -3,27 +3,43 @@
   const ctx = canvas.getContext('2d');
   canvas.width = 900; canvas.height = 600;
 
-  // === BALANCE SETTINGS ===
-  const ELIXIR = { max: 10, regenTime: 2.8 }; // 1 elixir every 2.8 sec
-  const TOWER = { hp: 500, dmg: 50, range: 120, cd: 2 };
-  const AI_SPAWN = { min: 4, max: 7 }; // seconds between AI spawns
+  // === CLASH ROYALE SETTINGS ===
+  const ELIXIR = { max: 10, regen: 2.8 }; // 1 elixir every 2.8s
+  const TOWER = { hp: 2000, dmg: 80, range: 180, cd: 1.5 };
+  const KING_TOWER = { hp: 2400, dmg: 100, range: 200, cd: 1.5 };
+  const AI_SPAWN = { min: 4, max: 7 };
 
-  // === CARD DEFINITIONS ===
+  // === CARD DEFINITIONS (Clash-like) ===
   const CARDS = [
-    { name: 'Knight', cost: 3, hp: 120, maxHp: 120, dmg: 20, speed: 1.2, r: 22, color: '#e74c3c' },
-    { name: 'Archer', cost: 3, hp: 60,  maxHp: 60,  dmg: 12, speed: 1.5, r: 18, color: '#3498db', range: 180 },
-    { name: 'Giant',  cost: 5, hp: 300, maxHp: 300, dmg: 30, speed: 0.8, r: 30, color: '#27ae60' }
+    { name: 'Knight', cost: 3, hp: 600, maxHp: 600, dmg: 80, speed: 1.0, r: 28, color: '#e74c3c', range: 50 },
+    { name: 'Archer', cost: 3, hp: 200, maxHp: 200, dmg: 50, speed: 1.2, r: 22, color: '#3498db', range: 200 },
+    { name: 'Giant',  cost: 5, hp: 2000, maxHp: 2000, dmg: 120, speed: 0.6, r: 40, color: '#27ae60', range: 50 }
   ];
 
   // === GAME STATE ===
-  let elixir = 0, elixirTimer = 0;
-  let aiSpawnTimer = 0;
+  let elixir = 4, elixirTimer = 0, aiSpawnTimer = 0;
   let hand = [], units = [];
-  const leftTower  = { x: 150, y: 300, hp: TOWER.hp, team: 1, cd: 0 };
-  const rightTower = { x: 750, y: 300, hp: TOWER.hp, team: -1, cd: 0 };
+  const lanes = [
+    { y: 200, bridgeX: 450 },
+    { y: 400, bridgeX: 450 }
+  ];
+  const leftTowers = [
+    { x: 180, y: 180, hp: TOWER.hp, team: 1, cd: 0, type: 'side' },
+    { x: 180, y: 420, hp: TOWER.hp, team: 1, cd: 0, type: 'side' },
+    { x: 120, y: 300, hp: KING_TOWER.hp, team: 1, cd: 0, type: 'king' }
+  ];
+  const rightTowers = [
+    { x: 720, y: 180, hp: TOWER.hp, team: -1, cd: 0, type: 'side' },
+    { x: 720, y: 420, hp: TOWER.hp, team: -1, cd: 0, type: 'side' },
+    { x: 780, y: 300, hp: KING_TOWER.hp, team: -1, cd: 0, type: 'king' }
+  ];
   let lastTime = 0;
 
-  // === UI: Build Cards ===
+  // === AUDIO ===
+  const spawnSfx = document.getElementById('spawn-sfx');
+  const attackSfx = document.getElementById('attack-sfx');
+
+  // === UI ===
   function initCards() {
     const div = document.getElementById('cards');
     div.innerHTML = '';
@@ -43,24 +59,24 @@
   }
 
   function updateElixirUI() {
-    document.getElementById('elixir').textContent = Math.floor(elixir);
+    const fill = document.getElementById('elixir-fill');
+    const text = document.getElementById('elixir-text');
+    const percent = (elixir / ELIXIR.max) * 100;
+    fill.style.width = percent + '%';
+    text.textContent = `${Math.floor(elixir)} / ${ELIXIR.max}`;
     hand.forEach((idx, i) => {
       document.querySelectorAll('.card')[i].disabled = elixir < CARDS[idx].cost;
     });
   }
 
-  // === SPAWN PLAYER UNIT ===
+  // === SPAWN ===
   function spawnPlayerUnit(card, handIdx) {
     if (elixir < card.cost) return;
     elixir -= card.cost;
-    const y = 200 + Math.random() * 200;
-    units.push({
-      ...card,
-      x: 100, y,
-      team: 1,
-      hp: card.maxHp,
-      cd: 0
-    });
+    const lane = Math.floor(Math.random() * 2);
+    const y = lanes[lane].y + (Math.random() - 0.5) * 80;
+    units.push({ ...card, x: 100, y, team: 1, hp: card.maxHp, cd: 0, lane });
+    spawnSfx.currentTime = 0; spawnSfx.play();
     replaceCard(handIdx);
     updateElixirUI();
   }
@@ -73,114 +89,110 @@
     btn.innerHTML = `<div>${c.name}</div><div class="cost">${c.cost}</div>`;
   }
 
-  // === AI SPAWN (BALANCED) ===
-  function trySpawnAI(dt) {
-    aiSpawnTimer += dt;
-    if (aiSpawnTimer >= AI_SPAWN.min + Math.random() * (AI_SPAWN.max - AI_SPAWN.min)) {
+  function spawnAI() {
+    aiSpawnTimer += (Math.random() * 0.016);
+    if (aiSpawnTimer >= 1 / ((AI_SPAWN.min + AI_SPAWN.max) / 2)) {
       const card = CARDS[Math.floor(Math.random() * CARDS.length)];
-      const y = 200 + Math.random() * 200;
-      units.push({
-        ...card,
-        x: 800, y,
-        team: -1,
-        hp: card.maxHp,
-        cd: 0
-      });
+      const lane = Math.floor(Math.random() * 2);
+      const y = lanes[lane].y + (Math.random() - 0.5) * 80;
+      units.push({ ...card, x: 800, y, team: -1, hp: card.maxHp, cd: 0, lane });
       aiSpawnTimer = 0;
     }
   }
 
-  // === MAIN GAME LOOP ===
+  // === MAIN LOOP ===
   function loop(time) {
     const dt = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
 
-    // --- Elixir Regen ---
+    // Elixir
     elixirTimer += dt;
-    if (elixirTimer >= ELIXIR.regenTime) {
+    if (elixirTimer >= ELIXIR.regen) {
       elixir = Math.min(elixir + 1, ELIXIR.max);
       elixirTimer = 0;
       updateElixirUI();
     }
 
-    // --- AI Spawn ---
-    trySpawnAI(dt);
+    spawnAI();
 
-    // --- Update Units ---
+    // Update Units
     units = units.filter(u => u.hp > 0);
     units.forEach(u => {
       if (u.cd > 0) u.cd -= dt;
 
-      let target = null;
-      let minDist = u.range || 50;
+      let target = null, minDist = u.range;
 
-      // Find closest enemy unit
+      // Target enemy units
       units.forEach(e => {
         if (e.team === u.team) return;
         const d = Math.hypot(u.x - e.x, u.y - e.y);
         if (d < minDist) { minDist = d; target = e; }
       });
 
-      // If no unit, target enemy tower
-      const enemyTower = u.team === 1 ? rightTower : leftTower;
-      const towerDist = Math.hypot(u.x - enemyTower.x, u.y - enemyTower.y);
-      if (towerDist < minDist) {
-        minDist = towerDist;
-        target = enemyTower;
-      }
+      // Target towers
+      const towers = u.team === 1 ? rightTowers : leftTowers;
+      towers.forEach(t => {
+        if (t.hp <= 0) return;
+        const d = Math.hypot(u.x - t.x, u.y - t.y);
+        if (d < minDist) { minDist = d; target = t; }
+      });
 
-      // Attack if in range
       if (target && u.cd <= 0) {
         target.hp -= u.dmg * dt;
-        u.cd = 1; // 1 sec attack cooldown
-      }
-      // Move if no target or out of range
-      else if (!target || minDist > (u.range || 50)) {
-        u.x += u.speed * u.team * 60 * dt; // 60 px/sec base speed
+        u.cd = 0.8;
+        if (target.hp > 0) { attackSfx.currentTime = 0; attackSfx.play(); }
+      } else if (!target) {
+        u.x += u.speed * u.team * 60 * dt;
       }
     });
 
-    // --- Towers Attack ---
-    [leftTower, rightTower].forEach(t => {
-      if (t.cd > 0) { t.cd -= dt; return; }
-      let target = null, minD = TOWER.range;
+    // Towers attack
+    [...leftTowers, ...rightTowers].forEach(t => {
+      if (t.hp <= 0 || t.cd > 0) { t.cd -= dt; return; }
+      let target = null, minD = t.type === 'king' ? KING_TOWER.range : TOWER.range;
       units.forEach(u => {
         if (u.team === t.team) return;
         const d = Math.hypot(t.x - u.x, t.y - u.y);
         if (d < minD) { minD = d; target = u; }
       });
       if (target) {
-        target.hp -= TOWER.dmg;
-        t.cd = TOWER.cd;
+        target.hp -= (t.type === 'king' ? KING_TOWER.dmg : TOWER.dmg);
+        t.cd = t.type === 'king' ? KING_TOWER.cd : TOWER.cd;
       }
     });
 
-    // --- DRAW ---
-    ctx.fillStyle = '#8b5a2b'; ctx.fillRect(0, 0, 900, 600); // Arena
+    // Draw
+    ctx.fillStyle = '#8b5a2b'; ctx.fillRect(0, 0, 900, 600);
     ctx.fillStyle = '#2980b9'; ctx.fillRect(430, 0, 40, 600); // River
 
-    // Draw Towers
-    [leftTower, rightTower].forEach(t => {
-      ctx.fillStyle = '#7f8c8d';
-      ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
-      const ratio = t.hp / TOWER.hp;
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(t.x - 35, t.y - 55, 70, 8);
-      ctx.fillStyle = '#27ae60'; ctx.fillRect(t.x - 35, t.y - 55, 70 * ratio, 8);
+    // Bridges
+    ctx.fillStyle = '#d35400';
+    lanes.forEach(l => ctx.fillRect(400, l.y - 40, 100, 80));
+
+    // Towers
+    [...leftTowers, ...rightTowers].forEach(t => {
+      if (t.hp <= 0) return;
+      ctx.fillStyle = t.team === 1 ? '#3498db' : '#e74c3c';
+      ctx.fillRect(t.x - 35, t.y - 50, 70, 100);
+      const ratio = t.hp / (t.type === 'king' ? KING_TOWER.hp : TOWER.hp);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(t.x - 40, t.y - 65, 80, 10);
+      ctx.fillStyle = '#27ae60'; ctx.fillRect(t.x - 40, t.y - 65, 80 * ratio, 10);
     });
 
-    // Draw Units
+    // Units
     units.forEach(u => {
       ctx.fillStyle = u.color;
       ctx.beginPath(); ctx.arc(u.x, u.y, u.r, 0, Math.PI * 2); ctx.fill();
-
       const ratio = u.hp / u.maxHp;
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(u.x - u.r, u.y - u.r - 12, u.r * 2, 5);
-      ctx.fillStyle = '#27ae60'; ctx.fillRect(u.x - u.r, u.y - u.r - 12, u.r * 2 * ratio, 5);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(u.x - u.r, u.y - u.r - 14, u.r * 2, 6);
+      ctx.fillStyle = '#27ae60'; ctx.fillRect(u.x - u.r, u.y - u.r - 14, u.r * 2 * ratio, 6);
     });
 
-    // --- WIN CHECK ---
-    if (leftTower.hp <= 0) endGame('Right Wins!');
-    else if (rightTower.hp <= 0) endGame('Left Wins!');
+    // Win
+    const leftAlive = leftTowers.some(t => t.hp > 0);
+    const rightAlive = rightTowers.some(t => t.hp > 0);
+    if (!leftAlive) endGame('Right Wins!');
+    else if (!rightAlive) endGame('Left Wins!');
 
     requestAnimationFrame(loop);
   }
@@ -189,10 +201,9 @@
     const el = document.getElementById('win');
     el.textContent = msg;
     el.classList.remove('hidden');
-    setTimeout(() => location.reload(), 3000);
+    setTimeout(() => location.reload(), 4000);
   }
 
-  // === START ===
   initCards();
   requestAnimationFrame(loop);
 })();
