@@ -1,259 +1,216 @@
-(() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const startMenu = document.getElementById('start-menu');
-  const lobby = document.getElementById('lobby');
-  const ui = document.getElementById('ui');
-  const win = document.getElementById('win');
-  const status = document.getElementById('status');
+// ————————————————————————————
+// ThatOneClash – Full Game Logic
+// BATTLE! → Multiplayer | AI MODE → Solo
+// Admin: F12 + iamadmin → Cheat Panel
+// ————————————————————————————
 
-  // Socket.io (replace with your Heroku URL)
-  const socket = io('https://thatoneclash-server.onrender.com'); // CHANGE THIS
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 600;
 
-  // Resize
-  const resize = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
-  window.onresize = resize; resize();
+const socket = io('https://thatoneclash-server.onrender.com', {
+  transports: ['websocket']
+});
 
-  // ---------- CONFIG ----------
-  const ELIXIR = { max:10, rate:2.8 };
-  const TOWER = { hp:2000, dmg:80, range:180, cd:1 };
-  const KING = { hp:2400, dmg:100, range:200, cd:1 };
-  const AI_SPAWN = { min:4, max:7 };
+let isAI = false;
+let roomCode = '';
+let playerSide = 'bottom';
+let elixir = 10;
+let maxElixir = 10;
+let elixirRegen = setInterval(() => { if (elixir < maxElixir) { elixir++; updateElixir(); } }, 1500);
 
-  // ---------- 8 CARDS ----------
-  const CARDS = [
-    {name:'Knight',cost:3,hp:600,maxHp:600,dmg:80,speed:1.0,r:28,range:50,color:'#c0392b'},
-    {name:'Archer',cost:3,hp:200,maxHp:200,dmg:50,speed:1.2,r:22,range:200,color:'#3498db'},
-    {name:'Giant',cost:5,hp:2000,maxHp:2000,dmg:120,speed:0.6,r:40,range:50,color:'#27ae60'},
-    {name:'Goblin',cost:2,hp:150,maxHp:150,dmg:60,speed:1.8,r:20,range:50,color:'#2ecc71'},
-    {name:'Wizard',cost:5,hp:400,maxHp:400,dmg:120,speed:0.9,r:26,range:180,color:'#9b59b6'},
-    {name:'PEKKA',cost:7,hp:3000,maxHp:3000,dmg:300,speed:0.7,r:45,range:60,color:'#34495e'},
-    {name:'MiniPEKKA',cost:4,hp:800,maxHp:800,dmg:200,speed:1.4,r:32,range:50,color:'#e67e22'},
-    {name:'BabyDragon',cost:4,hp:700,maxHp:700,dmg:100,speed:1.1,r:30,range:160,color:'#f39c12'}
-  ];
+// Game objects
+const towers = {
+  left: { x: 150, y: 250, hp: 1000, side: 'player' },
+  right: { x: 650, y: 250, hp: 1000, side: 'player' },
+  enemyLeft: { x: 150, y: 350, hp: 1000, side: 'enemy' },
+  enemyRight: { x: 650, y: 350, hp: 1000, side: 'enemy' }
+};
+const units = [];
 
-  // ---------- STATE ----------
-  let elixir = 8;
-  let elixirTimer = 0, aiTimer = 0;
-  let hand = [], units = [], remoteUnits = []; // Remote for multiplayer
-  let isMultiplayer = false, isAI = true; // Fallback to AI
+// Cards
+const cards = [
+  { name: 'Knight', cost: 3, spawn: () => spawnUnit('knight') },
+  { name: 'Archer', cost: 3, spawn: () => spawnUnit('archer') },
+  { name: 'Giant', cost: 5, spawn: () => spawnUnit('giant') }
+];
 
-  // FIXED TOWERS
-  const towers = [
-    {x:140,y:120,hp:TOWER.hp,team:1,cd:0,type:'princess'},
-    {x:140,y:480,hp:TOWER.hp,team:1,cd:0,type:'princess'},
-    {x:80,y:300,hp:KING.hp,team:1,cd:0,type:'king'},
-    {x:760,y:120,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
-    {x:760,y:480,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
-    {x:820,y:300,hp:KING.hp,team:-1,cd:0,type:'king'}
-  ];
-  let last = 0;
+// ————————————————————————————
+// START MENU
+// ————————————————————————————
+document.getElementById('play').onclick = () => {
+  document.getElementById('start-menu').classList.add('hidden');
+  document.getElementById('lobby').classList.remove('hidden');
+};
 
-  // ---------- MULTIPLAYER ----------
-  function joinRoom() {
-    const roomCode = document.getElementById('room-code').value.toUpperCase().padStart(4, '0');
-    if (roomCode.length !== 4) return alert('Room code must be 4 digits');
-    socket.emit('join', roomCode);
-    status.textContent = 'Connecting...';
-  }
+document.getElementById('join-room').onclick = () => {
+  roomCode = document.getElementById('room-input').value.trim() || '1234';
+  socket.emit('join', roomCode);
+};
 
-  socket.on('joined', (data) => {
-    lobby.classList.add('hidden');
-    ui.classList.remove('hidden');
-    isMultiplayer = true;
-    initCards();
-    status.textContent = `Room: ${data.room} | Opponent: ${data.opponent ? 'Online' : 'AI Fallback'}`;
-    if (!data.opponent) setTimeout(() => { isAI = true; status.textContent += ' (AI Mode)'; }, 30000); // Fallback after 30s
-    requestAnimationFrame(loop);
+// ————————————————————————————
+// AI MODE BUTTON (PUBLIC)
+// ————————————————————————————
+document.getElementById('ai-mode').onclick = () => {
+  isAI = true;
+  playerSide = 'bottom';
+  document.getElementById('start-menu').classList.add('hidden');
+  document.getElementById('ui').classList.remove('hidden');
+  initGame();
+
+  // Auto-spawn AI knight every 5s
+  setInterval(() => {
+    if (isAI) {
+      const aiUnit = {
+        type: 'knight',
+        x: 400,
+        y: 100,
+        side: 'enemy',
+        hp: 100,
+        speed: 1
+      };
+      units.push(aiUnit);
+      socket.emit('spawn', aiUnit);
+    }
+  }, 5000);
+};
+
+// ————————————————————————————
+// SOCKET.IO EVENTS
+// ————————————————————————————
+socket.on('joined', (data) => {
+  playerSide = data.opponent ? 'top' : 'bottom';
+  document.getElementById('lobby').classList.add('hidden');
+  document.getElementById('ui').classList.remove('hidden');
+  initGame();
+});
+
+socket.on('ai-fallback', () => {
+  isAI = true;
+  document.getElementById('status').textContent = 'No opponent — AI mode';
+});
+
+socket.on('spawn', (unit) => {
+  units.push(unit);
+});
+
+socket.on('end', (msg) => {
+  document.getElementById('win').textContent = msg;
+  document.getElementById('win').classList.remove('hidden');
+});
+
+// ————————————————————————————
+// GAME INIT
+// ————————————————————————————
+function initGame() {
+  createCards();
+  updateElixir();
+  gameLoop();
+}
+
+function createCards() {
+  const cardsDiv = document.getElementById('cards');
+  cardsDiv.innerHTML = '';
+  cards.forEach((card, i) => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.textContent = card.name;
+    div.onclick = () => { if (elixir >= card.cost) { elixir -= card.cost; updateElixir(); card.spawn(); } };
+    cardsDiv.appendChild(div);
   });
+}
 
-  socket.on('state', (state) => {
-    remoteUnits = state.units || [];
-  });
+function updateElixir() {
+  document.getElementById('elixir-fill').style.width = (elixir / maxElixir) * 100 + '%';
+  document.getElementById('elixir-text').textContent = `${elixir}/${maxElixir}`;
+}
 
-  socket.on('spawn', (unit) => {
-    units.push(unit); // Opponent spawn
-  });
-
-  // Send spawn to server
-  function sendSpawn(card, x, y) {
-    socket.emit('spawn', { card, x, y });
-  }
-
-  // ---------- START ----------
-  document.getElementById('play').onclick = () => {
-    startMenu.classList.add('hidden');
-    lobby.classList.remove('hidden');
+// ————————————————————————————
+// SPAWN UNIT
+// ————————————————————————————
+function spawnUnit(type) {
+  const unit = {
+    type,
+    x: playerSide === 'bottom' ? 400 : 400,
+    y: playerSide === 'bottom' ? 500 : 100,
+    side: playerSide === 'bottom' ? 'player' : 'enemy',
+    hp: 100,
+    speed: 1
   };
+  units.push(unit);
+  socket.emit('spawn', unit);
+}
 
-  // ---------- CARD UI ----------
-  function createCardBtn(cardData, index) {
-    const btn = document.createElement('button');
-    btn.className = 'card';
-    btn.style.setProperty('--card1', `var(--card${index+1}-1)`);
-    btn.style.setProperty('--card2', `var(--card${index+1}-2)`);
-    btn.innerHTML = `<div>${cardData.name}</div><div class="cost">${cardData.cost}</div>`;
-    btn.onclick = () => spawnPlayer(cardData, index);
-    btn.disabled = elixir < cardData.cost;
-    return btn;
-  }
+// ————————————————————————————
+// ADMIN & CHEAT PANEL
+// ————————————————————————————
+let isAdmin = false;
 
-  function initCards() {
-    const div = document.getElementById('cards');
-    div.innerHTML = '';
-    hand = [];
-    for(let i=0;i<4;i++){
-      const idx = Math.floor(Math.random()*CARDS.length);
-      hand.push(idx);
-      div.appendChild(createCardBtn(CARDS[idx], i));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F12') {
+    e.preventDefault();
+    if (!isAdmin) {
+      const code = prompt('Admin Code:');
+      if (code === 'iamadmin') {
+        isAdmin = true;
+        toggleCheat();
+      }
+    } else {
+      toggleCheat();
     }
   }
+});
 
-  function updateElixir(){
-    const fill = document.getElementById('elixir-fill');
-    const txt = document.getElementById('elixir-text');
-    const pct = Math.min(elixir,10)/10*100;
-    fill.style.width = pct+'%';
-    txt.textContent = `${Math.floor(elixir)} / 10`;
-    hand.forEach((i,idx)=>document.querySelectorAll('.card')[idx].disabled=elixir<CARDS[i].cost);
-  }
+function toggleCheat() {
+  const panel = document.getElementById('cheat-panel');
+  panel.classList.toggle('hidden');
+}
 
-  function replaceCard(idx){
-    const newIdx = Math.floor(Math.random()*CARDS.length);
-    hand[idx]=newIdx;
-    const container = document.querySelectorAll('.card')[idx].parentNode;
-    const oldBtn = document.querySelectorAll('.card')[idx];
-    container.replaceChild(createCardBtn(CARDS[newIdx], idx), oldBtn);
-  }
+function cheat(action, param) {
+  if (!isAdmin) return;
 
-  // ---------- SPAWN ----------
-  function spawnPlayer(card,handIdx){
-    if(elixir<card.cost) return;
-    elixir-=card.cost;
-    const lane = Math.random()<0.5?0:1;
-    const y = lane===0?180:420;
-    const unit = {...card,x:60,y:y+Math.random()*80,team:1,hp:card.maxHp,cd:0};
-    units.push(unit);
-    if (isMultiplayer) sendSpawn(card, 60, y); // Send to server
-    replaceCard(handIdx);
+  if (action === 'elixir') {
+    elixir = maxElixir = 10;
     updateElixir();
   }
-
-  function spawnAI(){
-    if (isMultiplayer && !isAI) return; // Skip if multiplayer
-    aiTimer+=0.016;
-    if(aiTimer>AI_SPAWN.min+Math.random()*(AI_SPAWN.max-AI_SPAWN.min)){
-      const c = CARDS[Math.floor(Math.random()*CARDS.length)];
-      const lane = Math.random()<0.5?0:1;
-      const y = lane===0?180:420;
-      units.push({...c,x:840,y:y+Math.random()*80,team:-1,hp:c.maxHp,cd:0});
-      aiTimer=0;
-    }
+  if (action === 'spawn') {
+    spawnUnit(param);
   }
-
-  // ---------- LOOP ----------
-  function loop(time){
-    const dt = Math.min((time-last)/1000,0.1);
-    last=time;
-
-    // Elixir
-    elixirTimer+=dt;
-    if(elixirTimer>=ELIXIR.rate){
-      elixir=Math.min(elixir+1,ELIXIR.max);
-      elixirTimer=0;
-      updateElixir();
-    }
-
-    spawnAI();
-
-    // Update local units
-    units = units.filter(u=>u.hp>0);
-    units.forEach(u=>{
-      if(u.cd>0) u.cd-=dt;
-      let target=null, minD=u.range||50;
-      // Target remote or local enemies
-      [...units, ...remoteUnits].forEach(e=>{if(e.team===u.team)return;
-        const d=Math.hypot(u.x-e.x,u.y-e.y);
-        if(d<minD){minD=d;target=e;}
-      });
-      const enemyTowers = u.team===1?towers.slice(3):towers.slice(0,3);
-      enemyTowers.forEach(t=>{if(t.hp<=0)return;
-        const d=Math.hypot(u.x-t.x,u.y-t.y);
-        if(d<minD){minD=d;target=t;}
-      });
-      if(target && u.cd<=0){
-        target.hp-=u.dmg*dt;
-        u.cd=0.8;
-      }else if(!target){
-        u.x+=u.speed*u.team*60*dt;
-      }
-    });
-
-    // Towers (local only, sync via server)
-    towers.forEach(t=>{
-      if(t.hp<=0 || t.cd>0){t.cd-=dt;return;}
-      let target=null, minD = t.type==='king'?KING.range:TOWER.range;
-      [...units, ...remoteUnits].forEach(u=>{if(u.team===t.team)return;
-        const d=Math.hypot(t.x-u.x,t.y-u.y);
-        if(d<minD){minD=d;target=u;}
-      });
-      if(target){
-        target.hp-=(t.type==='king'?KING.dmg:TOWER.dmg);
-        t.cd = t.type==='king'?KING.cd:TOWER.cd;
-      }
-    });
-
-    // Draw local + remote
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#8b5a2b'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#2980b9'; ctx.fillRect(canvas.width/2-40,0,80,canvas.height);
-    ctx.fillStyle='#d35400';
-    ctx.fillRect(canvas.width/2-80,140,160,80);
-    ctx.fillRect(canvas.width/2-80,380,160,80);
-
-    towers.forEach(t=>{
-      if(t.hp<=0) return;
-      ctx.fillStyle = t.team===1?'#3498db':'#e74c3c';
-      ctx.fillRect(t.x-35,t.y-50,70,100);
-      const ratio = t.hp/(t.type==='king'?KING.hp:TOWER.hp);
-      ctx.fillStyle='#c0392b'; ctx.fillRect(t.x-40,t.y-65,80,10);
-      ctx.fillStyle='#27ae60'; ctx.fillRect(t.x-40,t.y-65,80*ratio,10);
-    });
-
-    // Draw local units
-    units.forEach(u=>{
-      ctx.fillStyle = u.color;
-      ctx.beginPath(); ctx.arc(u.x,u.y,u.r,0,Math.PI*2); ctx.fill();
-      const ratio = u.hp/u.maxHp;
-      ctx.fillStyle='#c0392b'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2,6);
-      ctx.fillStyle='#27ae60'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2*ratio,6);
-    });
-
-    // Draw remote units (opponent)
-    remoteUnits.forEach(u=>{
-      ctx.fillStyle = '#ff6b6b'; // Opponent color
-      ctx.beginPath(); ctx.arc(u.x,u.y,u.r,0,Math.PI*2); ctx.fill();
-      const ratio = u.hp/u.maxHp;
-      ctx.fillStyle='#c0392b'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2,6);
-      ctx.fillStyle='#27ae60'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2*ratio,6);
-    });
-
-    const leftAlive = towers.slice(0,3).some(t=>t.hp>0);
-    const rightAlive = towers.slice(3).some(t=>t.hp>0);
-    if(!leftAlive) end('Right Wins!');
-    else if(!rightAlive) end('Left Wins!');
-
-    requestAnimationFrame(loop);
+  if (action === 'tower') {
+    if (param === 'left') towers.enemyLeft.hp = 0;
+    if (param === 'right') towers.enemyRight.hp = 0;
   }
-
-  function end(msg){
-    win.textContent=msg;
-    win.classList.remove('hidden');
-    socket.emit('end', msg); // Notify server
-    setTimeout(()=>location.reload(),4000);
+  if (action === 'win') {
+    socket.emit('end', 'ADMIN WIN');
   }
+  if (action === 'ai') {
+    isAI = !isAI;
+    document.getElementById('ai-status').textContent = isAI ? 'AI MODE: ON' : 'AI MODE: OFF';
+  }
+}
 
-  // === ADMIN LINK ===
-  window.game = { units, towers, elixir, updateElixir, CARDS };
-  console.log("%c ADMIN: Open /admin.html", "color:#f1c40f;font-size:14px");
-})();
+// ————————————————————————————
+// GAME LOOP
+// ————————————————————————————
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw towers
+  Object.values(towers).forEach(t => {
+    ctx.fillStyle = t.hp > 0 ? '#f1c40f' : '#666';
+    ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Arial';
+    ctx.fillText(`${t.hp}`, t.x - 15, t.y - 45);
+  });
+
+  // Draw units
+  units.forEach(u => {
+    ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
+    ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
+    u.y += u.side === 'player' ? -u.speed : u.speed;
+  });
+
+  requestAnimationFrame(gameLoop);
+}
