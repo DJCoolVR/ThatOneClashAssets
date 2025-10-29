@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ThatOneClash</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -13,53 +13,51 @@
   <div id="start-menu">
     <div class="crown">Crown</div>
     <h1>ThatOneClash</h1>
-    <p class="tap">Tap to Play</p>
-    <div class="particles"></div>
-    <button id="play">BATTLE!</button>
+    <p class="tap">TAP TO PLAY</p>
+    <div class="button-group">
+      <button id="play">BATTLE!</button>
+      <button id="ai-mode">AI MODE</button>
+    </div>
   </div>
 
-  <!-- MULTIPLAYER LOBBY -->
+  <!-- LOBBY -->
   <div id="lobby" class="hidden">
-    <h2>Join Battle</h2>
-    <input type="text" id="room-code" placeholder="Enter room code (e.g., 1234)" maxlength="4" />
-    <button onclick="joinRoom()">JOIN</button>
+    <h2>Multiplayer</h2>
+    <input type="text" id="room-input" placeholder="Room Code (e.g. 1234)" />
+    <button id="join-room">Join Room</button>
     <p id="status">Waiting for opponent...</p>
   </div>
 
-  <!-- GAME UI -->
+  <!-- GAME -->
+  <canvas id="game"></canvas>
+
+  <!-- UI -->
   <div id="ui" class="hidden">
     <div id="elixir-bar">
       <div id="elixir-fill"></div>
-      <span id="elixir-text">8 / 10</span>
+      <div id="elixir-text">10/10</div>
     </div>
     <div id="cards"></div>
   </div>
 
-  <canvas id="game"></canvas>
-  <div id="win" class="hidden"></div>
+  <!-- WIN SCREEN -->
+  <div id="win" class="hidden">YOU WIN!</div>
 
+  <!-- CHEAT PANEL (Admin Only) -->
+  <div id="cheat-panel" class="hidden">
+    <h3>ADMIN CHEATS</h3>
+    <button onclick="cheat('elixir')">Max Elixir</button>
+    <button onclick="cheat('spawn', 'knight')">Spawn Knight</button>
+    <button onclick="cheat('spawn', 'archer')">Spawn Archer</button>
+    <button onclick="cheat('tower', 'left')">Destroy Left Tower</button>
+    <button onclick="cheat('tower', 'right')">Destroy Right Tower</button>
+    <button onclick="cheat('win')">Win Instantly</button>
+    <button onclick="cheat('ai')">Toggle AI Mode</button>
+    <button onclick="toggleCheat()">Close</button>
+    <p id="ai-status" style="color:#f1c40f; margin-top:1rem;"></p>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="game.js"></script>
-
-  <!-- RANDOM COLORS -->
-  <script>
-    const palette = ['#e74c3c','#f39c12','#27ae60','#3498db','#9b59b6','#1abc9c','#f1c40f','#e67e22','#2ecc71','#34495e','#d35400','#8e44ad'];
-    const btnC1 = palette[Math.floor(Math.random()*palette.length)];
-    let btnC2 = palette[Math.floor(Math.random()*palette.length)];
-    while (btnC2 === btnC1) btnC2 = palette[Math.floor(Math.random()*palette.length)];
-    document.documentElement.style.setProperty('--btn1', btnC1);
-    document.documentElement.style.setProperty('--btn2', btnC2);
-    for (let i = 0; i < 4; i++) {
-      let c1 = palette[Math.floor(Math.random()*palette.length)];
-      let c2 = palette[Math.floor(Math.random()*palette.length)];
-      while (c2 === c1) c2 = palette[Math.floor(Math.random()*palette.length)];
-      document.documentElement.style.setProperty(`--card${i+1}-1`, c1);
-      document.documentElement.style.setProperty(`--card${i+1}-2`, c2);
-    }
-  </script>
-
-  <!-- ADMIN HINT -->
-  <script>
-    console.log("%c ADMIN PANEL: /admin.html | Password: clashking2025", "color:#f1c40f;font-weight:bold");
-  </script>
 </body>
 </html>
