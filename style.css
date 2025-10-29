@@ -1,6 +1,19 @@
+/* -------------------------------------------------
+   ThatOneClash – Complete CSS
+   Includes: Start Screen, Lobby, Game, Admin
+------------------------------------------------- */
+
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden;background:#0b132b;font-family:"Bangers",Arial,sans-serif;color:#fff}
-#game{display:block;width:100%;height:100%;background:#1e3a5f}
+html,body{
+  height:100%;overflow:hidden;
+  background:#0b132b;
+  font-family:"Bangers",Arial,sans-serif;
+  color:#fff;
+}
+#game{
+  display:block;width:100%;height:100%;
+  background:#1e3a5f;
+}
 
 /* ---------- CLASH ROYALE START SCREEN ---------- */
 #start-menu{
@@ -14,7 +27,10 @@ html,body{height:100%;overflow:hidden;background:#0b132b;font-family:"Bangers",A
   text-shadow:0 0 30px #f1c40f,0 0 60px #f1c40f;
   animation:float 3s ease-in-out infinite;
 }
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-25px)}}
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-25px)}
+}
 #start-menu h1{
   font-size:4rem;margin-bottom:0.5rem;color:#f1c40f;
   text-shadow:0 0 20px #f1c40f,0 0 40px #f1c40f;
@@ -32,7 +48,10 @@ html,body{height:100%;overflow:hidden;background:#0b132b;font-family:"Bangers",A
   box-shadow:0 10px 30px rgba(0,0,0,.6);transition:.3s;font-weight:bold;
   text-shadow:0 2px 4px rgba(0,0,0,.5);
 }
-#play:hover{transform:scale(1.12);box-shadow:0 15px 40px rgba(0,0,0,.8);}
+#play:hover{
+  transform:scale(1.12);
+  box-shadow:0 15px 40px rgba(0,0,0,.8);
+}
 
 /* Particles */
 .particles{
@@ -50,24 +69,57 @@ html,body{height:100%;overflow:hidden;background:#0b132b;font-family:"Bangers",A
   100%{transform:translateY(-100px) scale(1.5);opacity:0}
 }
 
-/* ---------- UI ---------- */
+/* ---------- MULTIPLAYER LOBBY ---------- */
+#lobby{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.9);padding:2rem;border-radius:20px;text-align:center;
+  border:3px solid #f1c40f;box-shadow:0 0 30px #f1c40f;z-index:99;
+}
+#lobby h2{
+  margin-bottom:1rem;color:#f1c40f;font-size:2rem;
+}
+#lobby input{
+  padding:1rem;width:200px;border:2px solid #f1c40f;border-radius:10px;
+  background:#2c3e50;color:#fff;font-size:1.1rem;margin-bottom:1rem;
+}
+#lobby button{
+  margin:1rem;background:#e74c3c;padding:1rem 2rem;border:none;
+  border-radius:10px;color:#fff;cursor:pointer;font-size:1.1rem;
+  box-shadow:0 6px 15px rgba(231,76,60,.5);transition:.2s;
+}
+#lobby button:hover{
+  transform:scale(1.05);box-shadow:0 10px 25px rgba(231,76,60,.7);
+}
+#status{
+  color:#aaa;margin-top:1rem;font-size:1rem;
+}
+
+/* ---------- GAME UI ---------- */
 #ui{
   position:fixed;top:0;left:0;width:100%;padding:1rem;
   display:flex;justify-content:space-between;align-items:center;
   background:rgba(0,0,0,.5);backdrop-filter:blur(10px);
+  z-index:10;
 }
 #elixir-bar{
   width:220px;height:44px;background:#2c3e50;border:4px solid #f1c40f;
-  border-radius:22px;position:relative;overflow:hidden;box-shadow:0 0 20px #f1c40f;
+  border-radius:22px;position:relative;overflow:hidden;
+  box-shadow:0 0 20px #f1c40f;
 }
-#elixir-fill{height:100%;width:80%;background:linear-gradient(90deg,#9b59b6,#f1c40f);transition:width .2s}
+#elixir-fill{
+  height:100%;width:80%;
+  background:linear-gradient(90deg,#9b59b6,#f1c40f);
+  transition:width .2s;
+}
 #elixir-text{
   position:absolute;inset:0;display:flex;justify-content:center;align-items:center;
   font-weight:bold;font-size:1.1rem;
 }
 
 /* ---------- CARDS ---------- */
-#cards{display:flex;gap:14px;justify-content:center}
+#cards{
+  display:flex;gap:14px;justify-content:center;
+}
 .card{
   width:74px;height:104px;
   background:linear-gradient(145deg,var(--card1),var(--card2));
@@ -75,20 +127,55 @@ html,body{height:100%;overflow:hidden;background:#0b132b;font-family:"Bangers",A
   display:flex;flex-direction:column;justify-content:center;align-items:center;
   cursor:pointer;transition:all .25s;position:relative;
   box-shadow:0 8px 25px rgba(0,0,0,.6);color:white;font-weight:bold;
+  font-size:0.9rem;
 }
-.card:hover{transform:translateY(-6px);box-shadow:0 16px 35px rgba(0,0,0,.8);}
-.card:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 16px 35px rgba(0,0,0,.8);
+}
+.card:disabled{
+  opacity:.5;cursor:not-allowed;transform:none;
+}
 .card .cost{
   position:absolute;bottom:-14px;width:30px;height:30px;background:#e74c3c;
   color:#fff;border-radius:50%;font-weight:bold;line-height:30px;
-  box-shadow:0 5px 10px rgba(0,0,0,.6);
+  box-shadow:0 5px 10px rgba(0,0,0,.6);font-size:0.9rem;
 }
 
-/* ---------- WIN ---------- */
+/* ---------- WIN SCREEN ---------- */
 #win{
   position:fixed;inset:0;display:flex;justify-content:center;align-items:center;
   background:rgba(0,0,0,.95);font-size:3.5rem;font-weight:bold;color:#f1c40f;
-  text-shadow:0 0 30px #f1c40f;animation:pulse 1.5s infinite;
+  text-shadow:0 0 30px #f1c40f;animation:pulse 1.5s infinite;z-index:200;
 }
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+}
+
+/* ---------- HIDDEN ELEMENTS ---------- */
 .hidden{display:none!important}
+
+/* ---------- ADMIN PANEL (Optional Styling) ---------- */
+.admin-panel{
+  background:#0b132b;padding:2rem;border-radius:16px;
+  border:2px solid #f1c40f;box-shadow:0 0 25px #f1c40f;
+  max-width:400px;margin:2rem auto;
+}
+.admin-panel h2{
+  color:#f1c40f;text-align:center;margin-bottom:1rem;
+}
+.admin-panel button{
+  width:100%;margin:0.5rem 0;padding:1rem;
+  background:linear-gradient(45deg,#e74c3c,#c0392b);
+  color:#fff;border:none;border-radius:12px;cursor:pointer;
+  font-weight:bold;transition:.2s;
+}
+.admin-panel button:hover{
+  transform:scale(1.03);box-shadow:0 8px 20px rgba(231,76,60,.6);
+}
+.log{
+  background:#1a1a2e;padding:1rem;border-radius:12px;margin-top:1rem;
+  max-height:300px;overflow-y:auto;text-align:left;
+  font-family:monospace;font-size:0.9rem;border:2px solid #f1c40f;
+}
