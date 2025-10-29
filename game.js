@@ -1,7 +1,6 @@
 // ————————————————————————————
-// ThatOneClash – Full Game Logic
-// BATTLE! → Multiplayer | AI MODE → Solo
-// Admin: F12 + iamadmin → Cheat Panel
+// ThatOneClash – Chromebook Edition
+// Press \ to open admin (iamadmin)
 // ————————————————————————————
 
 const canvas = document.getElementById('game');
@@ -20,7 +19,6 @@ let elixir = 10;
 let maxElixir = 10;
 let elixirRegen = setInterval(() => { if (elixir < maxElixir) { elixir++; updateElixir(); } }, 1500);
 
-// Game objects
 const towers = {
   left: { x: 150, y: 250, hp: 1000, side: 'player' },
   right: { x: 650, y: 250, hp: 1000, side: 'player' },
@@ -50,7 +48,7 @@ document.getElementById('join-room').onclick = () => {
 };
 
 // ————————————————————————————
-// AI MODE BUTTON (PUBLIC)
+// AI MODE BUTTON
 // ————————————————————————————
 document.getElementById('ai-mode').onclick = () => {
   isAI = true;
@@ -59,7 +57,6 @@ document.getElementById('ai-mode').onclick = () => {
   document.getElementById('ui').classList.remove('hidden');
   initGame();
 
-  // Auto-spawn AI knight every 5s
   setInterval(() => {
     if (isAI) {
       const aiUnit = {
@@ -77,7 +74,7 @@ document.getElementById('ai-mode').onclick = () => {
 };
 
 // ————————————————————————————
-// SOCKET.IO EVENTS
+// SOCKET.IO
 // ————————————————————————————
 socket.on('joined', (data) => {
   playerSide = data.opponent ? 'top' : 'bottom';
@@ -88,7 +85,6 @@ socket.on('joined', (data) => {
 
 socket.on('ai-fallback', () => {
   isAI = true;
-  document.getElementById('status').textContent = 'No opponent — AI mode';
 });
 
 socket.on('spawn', (unit) => {
@@ -112,7 +108,7 @@ function initGame() {
 function createCards() {
   const cardsDiv = document.getElementById('cards');
   cardsDiv.innerHTML = '';
-  cards.forEach((card, i) => {
+  cards.forEach((card) => {
     const div = document.createElement('div');
     div.className = 'card';
     div.textContent = card.name;
@@ -126,9 +122,6 @@ function updateElixir() {
   document.getElementById('elixir-text').textContent = `${elixir}/${maxElixir}`;
 }
 
-// ————————————————————————————
-// SPAWN UNIT
-// ————————————————————————————
 function spawnUnit(type) {
   const unit = {
     type,
@@ -143,24 +136,30 @@ function spawnUnit(type) {
 }
 
 // ————————————————————————————
-// ADMIN & CHEAT PANEL
+// ADMIN: Press \ (backslash)
 // ————————————————————————————
 let isAdmin = false;
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'F12') {
+  if (e.key === '\\') {
     e.preventDefault();
-    if (!isAdmin) {
-      const code = prompt('Admin Code:');
-      if (code === 'iamadmin') {
-        isAdmin = true;
-        toggleCheat();
-      }
-    } else {
-      toggleCheat();
-    }
+    openAdmin();
   }
 });
+
+function openAdmin() {
+  if (isAdmin) {
+    toggleCheat();
+    return;
+  }
+
+  const code = prompt('Admin Code:');
+  if (code === 'iamadmin') {
+    isAdmin = true;
+    toggleCheat();
+    alert('Admin mode activated!');
+  }
+}
 
 function toggleCheat() {
   const panel = document.getElementById('cheat-panel');
@@ -196,7 +195,6 @@ function cheat(action, param) {
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw towers
   Object.values(towers).forEach(t => {
     ctx.fillStyle = t.hp > 0 ? '#f1c40f' : '#666';
     ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
@@ -205,7 +203,6 @@ function gameLoop() {
     ctx.fillText(`${t.hp}`, t.x - 15, t.y - 45);
   });
 
-  // Draw units
   units.forEach(u => {
     ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
     ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
