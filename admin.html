@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ThatOneClash – ADMIN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      background:#0b132b;font-family:Arial,sans-serif;color:#fff;
+      padding:2rem;text-align:center;
+    }
+    h1{color:#f1c40f;text-shadow:0 0 15px #f1c40f;margin-bottom:1rem}
+    input,button{
+      padding:1rem;margin:0.5rem;font-size:1.1rem;border-radius:12px;
+    }
+    input{width:280px;border:3px solid #f1c40f;background:#2c3e50;color:#fff}
+    button{
+      background:#e74c3c;color:#fff;border:none;cursor:pointer;
+      box-shadow:0 6px 15px rgba(231,76,60,.5);transition:.2s;
+    }
+    button:hover{transform:scale(1.05);box-shadow:0 10px 25px rgba(231,76,60,.7)}
+    .panel{margin-top:2rem;display:none}
+    .log{
+      background:#1a1a2e;padding:1rem;border-radius:12px;margin-top:1rem;
+      max-height:300px;overflow-y:auto;text-align:left;font-family:monospace;
+      border:2px solid #f1c40f;
+    }
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <h1>ADMIN PANEL</h1>
+  <p>Enter your secret password</p>
+  <input type="password" id="pass" placeholder="Password" />
+  <button onclick="check()">ENTER</button>
+
+  <div id="admin" class="panel hidden">
+    <h2>Controls</h2>
+    <button onclick="spawnAll()">Spawn All Units</button>
+    <button onclick="destroyEnemy()">Destroy Enemy Towers</button>
+    <button onclick="resetGame()">Reset Game</button>
+    <button onclick="addElixir()">+10 Elixir</button>
+
+    <h3>Live Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+
+  <script>
+    const PASSWORD = "clashking2025"; // CHANGE THIS!
+
+    function check(){
+      if(document.getElementById('pass').value === PASSWORD){
+        document.getElementById('admin').classList.remove('hidden');
+        log("Admin access granted");
+      } else {
+        alert("Wrong password!");
+      }
+    }
+
+    function log(msg){
+      const l = document.getElementById('log');
+      l.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+      l.scrollTop = l.scrollHeight;
+    }
+
+    function spawnAll(){
+      if(!window.game) return log("Game not loaded");
+      window.game.units.push(...window.game.CARDS.map((c,i)=>({
+        ...c, x:200+i*50, y:300, team:1, hp:c.maxHp, cd:0
+      })));
+      log("Spawned all units");
+    }
+
+    function destroyEnemy(){
+      if(!window.game) return log("Game not loaded");
+      window.game.towers.forEach(t=>{ if(t.team===-1) t.hp=0; });
+      log("Enemy towers destroyed");
+    }
+
+    function resetGame(){
+      location.href = "index.html";
+    }
+
+    function addElixir(){
+      if(!window.game) return log("Game not loaded");
+      window.game.elixir = 10;
+      window.game.updateElixir();
+      log("+10 Elixir");
+    }
+
+    setInterval(()=>{
+      if(window.game && !document.getElementById('log').innerHTML.includes("Connected")){
+        log("Connected to game engine");
+      }
+    },1000);
+  </script>
+</body>
+</html>
