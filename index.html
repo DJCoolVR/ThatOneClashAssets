@@ -8,9 +8,12 @@
 </head>
 <body>
 
-  <!-- START MENU -->
+  <!-- ENHANCED START MENU -->
   <div id="start-menu">
+    <div class="crown">Crown</div>
     <h1>ThatOneClash</h1>
+    <p class="tap">Tap to Play</p>
+    <div class="particles"></div>
     <button id="play">BATTLE!</button>
   </div>
 
@@ -27,5 +30,22 @@
   <div id="win" class="hidden"></div>
 
   <script src="game.js"></script>
+
+  <!-- RANDOM COLORS ON EVERY LOAD -->
+  <script>
+    const palette = ['#e74c3c','#f39c12','#27ae60','#3498db','#9b59b6','#1abc9c','#f1c40f','#e67e22','#2ecc71','#34495e','#d35400','#8e44ad'];
+    const btnC1 = palette[Math.floor(Math.random()*palette.length)];
+    let btnC2 = palette[Math.floor(Math.random()*palette.length)];
+    while (btnC2 === btnC1) btnC2 = palette[Math.floor(Math.random()*palette.length)];
+    document.documentElement.style.setProperty('--btn1', btnC1);
+    document.documentElement.style.setProperty('--btn2', btnC2);
+    for (let i = 0; i < 4; i++) {
+      let c1 = palette[Math.floor(Math.random()*palette.length)];
+      let c2 = palette[Math.floor(Math.random()*palette.length)];
+      while (c2 === c1) c2 = palette[Math.floor(Math.random()*palette.length)];
+      document.documentElement.style.setProperty(`--card${i+1}-1`, c1);
+      document.documentElement.style.setProperty(`--card${i+1}-2`, c2);
+    }
+  </script>
 </body>
 </html>
