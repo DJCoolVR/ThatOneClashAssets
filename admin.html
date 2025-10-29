@@ -6,26 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{
-      background:#0b132b;font-family:Arial,sans-serif;color:#fff;
-      padding:2rem;text-align:center;
-    }
+    body{background:#0b132b;font-family:Arial,sans-serif;color:#fff;padding:2rem;text-align:center;}
     h1{color:#f1c40f;text-shadow:0 0 15px #f1c40f;margin-bottom:1rem}
-    input,button{
-      padding:1rem;margin:0.5rem;font-size:1.1rem;border-radius:12px;
-    }
+    input,button{padding:1rem;margin:0.5rem;font-size:1.1rem;border-radius:12px;}
     input{width:280px;border:3px solid #f1c40f;background:#2c3e50;color:#fff}
-    button{
-      background:#e74c3c;color:#fff;border:none;cursor:pointer;
-      box-shadow:0 6px 15px rgba(231,76,60,.5);transition:.2s;
-    }
+    button{background:#e74c3c;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 15px rgba(231,76,60,.5);transition:.2s;}
     button:hover{transform:scale(1.05);box-shadow:0 10px 25px rgba(231,76,60,.7)}
     .panel{margin-top:2rem;display:none}
-    .log{
-      background:#1a1a2e;padding:1rem;border-radius:12px;margin-top:1rem;
-      max-height:300px;overflow-y:auto;text-align:left;font-family:monospace;
-      border:2px solid #f1c40f;
-    }
+    .log{background:#1a1a2e;padding:1rem;border-radius:12px;margin-top:1rem;max-height:300px;overflow-y:auto;text-align:left;font-family:monospace;border:2px solid #f1c40f;}
+    .players{list-style:none;}
+    .players li{padding:0.5rem;background:#2c3e50;margin:0.5rem;border-radius:8px;}
     .hidden{display:none}
   </style>
 </head>
@@ -36,18 +26,28 @@
   <button onclick="check()">ENTER</button>
 
   <div id="admin" class="panel hidden">
-    <h2>Controls</h2>
+    <h2>Game Controls</h2>
     <button onclick="spawnAll()">Spawn All Units</button>
     <button onclick="destroyEnemy()">Destroy Enemy Towers</button>
-    <button onclick="resetGame()">Reset Game</button>
     <button onclick="addElixir()">+10 Elixir</button>
+
+    <h2>Multiplayer Admin</h2>
+    <button onclick="viewPlayers()">View Online Players</button>
+    <button onclick="kickAll()">Kick All Players</button>
+    <button onclick="forceAI()">Force AI Mode Global</button>
+    <button onclick="resetAll()">Global Reset</button>
 
     <h3>Live Log</h3>
     <div id="log" class="log"></div>
+
+    <div id="players-list" class="hidden">
+      <h3>Online Players</h3>
+      <ul id="players"></ul>
+    </div>
   </div>
 
   <script>
-    const PASSWORD = "iamadmin"; // CHANGE THIS!
+    const PASSWORD = "clashking2025"; // CHANGE THIS!
 
     function check(){
       if(document.getElementById('pass').value === PASSWORD){
@@ -78,15 +78,34 @@
       log("Enemy towers destroyed");
     }
 
-    function resetGame(){
-      location.href = "index.html";
-    }
-
     function addElixir(){
       if(!window.game) return log("Game not loaded");
       window.game.elixir = 10;
       window.game.updateElixir();
       log("+10 Elixir");
+    }
+
+    // NEW: Multiplayer Admin
+    function viewPlayers(){
+      // Simulate fetching from server (in real, fetch from Heroku API)
+      log("Online players: Player1 (Room 1234), Player2 (Room 5678)");
+      document.getElementById('players-list').classList.remove('hidden');
+      document.getElementById('players').innerHTML = '<li>Player1 - Room 1234</li><li>Player2 - Room 5678</li>';
+    }
+
+    function kickAll(){
+      log("Kicked all players");
+      // In real, emit to server
+    }
+
+    function forceAI(){
+      log("Forced AI mode global");
+      // Emit to server
+    }
+
+    function resetAll(){
+      location.href = "index.html";
+      log("Global reset");
     }
 
     setInterval(()=>{
