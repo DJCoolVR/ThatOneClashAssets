@@ -1,58 +1,70 @@
 *{margin:0;padding:0;box-sizing:border-box}
-body{
-  background:#0b132b;
-  font-family:Arial,Helvetica,sans-serif;
-  overflow:hidden;
-  height:100vh;
-  color:#fff;
-}
+html,body{height:100%;overflow:hidden;background:#0b132b;font-family:Arial,Helvetica,sans-serif;color:#fff}
+#game{display:block;width:100%;height:100%;background:#1e3a5f}
 
 /* ---------- START MENU ---------- */
 #start-menu{
-  position:fixed; inset:0; z-index:100;
-  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  position:fixed;inset:0;z-index:100;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
   background:radial-gradient(circle at center,#1c2b5a,#0b132b);
+  overflow:hidden;
 }
+.crown{font-size:6rem;margin-bottom:1rem;animation:float 3s infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
 #start-menu h1{
-  font-size:3rem; margin-bottom:2rem; color:#f1c40f;
-  text-shadow:0 0 15px #f1c40f;
+  font-size:3.5rem;margin-bottom:1rem;color:#f1c40f;
+  text-shadow:0 0 20px #f1c40f;animation:pulse 2s infinite;
 }
+.tap{font-size:1.2rem;color:#aaa;margin-bottom:2rem;opacity:0.8}
 #play{
-  font-size:2rem; padding:1rem 3rem; background:#e74c3c; color:#fff;
-  border:none; border-radius:50px; cursor:pointer;
-  box-shadow:0 8px 20px rgba(231,76,60,.5);
-  transition:.2s;
+  font-size:2rem;padding:1rem 3rem;
+  background:linear-gradient(45deg,var(--btn1),var(--btn2));
+  color:#fff;border:none;border-radius:50px;cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,0,0,.5);transition:.2s;font-weight:bold;
 }
-#play:hover{transform:scale(1.1);box-shadow:0 12px 30px rgba(231,76,60,.7);}
+#play:hover{transform:scale(1.1);box-shadow:0 12px 30px rgba(0,0,0,.7);}
 
-/* ---------- GAME UI ---------- */
+/* Particles */
+.particles{
+  position:absolute;inset:0;pointer-events:none;
+}
+.particles::before{
+  content:'';position:absolute;width:6px;height:6px;background:#f1c40f;
+  border-radius:50%;box-shadow:0 0 10px #f1c40f;animation:particle 3s infinite;
+}
+@keyframes particle{
+  0%{transform:translateY(100vh) scale(0);opacity:0}
+  50%{opacity:1}
+  100%{transform:translateY(-100px) scale(1);opacity:0}
+}
+
+/* ---------- UI ---------- */
 #ui{
-  position:fixed; top:0; left:0; width:100%; padding:1rem;
-  display:flex; justify-content:space-between; align-items:center;
-  background:rgba(0,0,0,.5); backdrop-filter:blur(8px);
+  position:fixed;top:0;left:0;width:100%;padding:1rem;
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(8px);
 }
 #elixir-bar{
-  width:200px; height:40px; background:#2c3e50; border:3px solid #f1c40f;
-  border-radius:20px; position:relative; overflow:hidden;
-  box-shadow:0 0 15px #f1c40f;
+  width:200px;height:40px;background:#2c3e50;border:3px solid #f1c40f;
+  border-radius:20px;position:relative;overflow:hidden;box-shadow:0 0 15px #f1c40f;
 }
-#elixir-fill{
-  height:100%; width:0%; background:linear-gradient(90deg,#9b59b6,#f1c40f);
-  transition:width .15s;
-}
+#elixir-fill{height:100%;width:0%;background:linear-gradient(90deg,#9b59b6,#f1c40f);transition:width .15s}
 #elixir-text{
-  position:absolute; inset:0; display:flex; justify-content:center;
-  align-items:center; font-weight:bold; font-size:1rem;
+  position:absolute;inset:0;display:flex;justify-content:center;align-items:center;
+  font-weight:bold;font-size:1rem;
 }
 
-/* Cards */
-#cards{display:flex;gap:12px}
+/* ---------- CARDS ---------- */
+#cards{display:flex;gap:12px;justify-content:center}
 .card{
-  width:70px;height:100px;background:#2c3e50;border:3px solid #f1c40f;
-  border-radius:12px;display:flex;flex-direction:column;justify-content:center;
-  align-items:center;cursor:pointer;transition:.2s;position:relative;
+  width:70px;height:100px;
+  background:linear-gradient(145deg,var(--card1),var(--card2));
+  border:3px solid #f1c40f;border-radius:12px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  cursor:pointer;transition:all .2s;position:relative;
+  box-shadow:0 8px 20px rgba(0,0,0,.5);color:white;font-weight:bold;
 }
-.card:hover{transform:translateY(-5px);box-shadow:0 10px 20px rgba(0,0,0,.6);}
+.card:hover{transform:translateY(-5px);box-shadow:0 15px 30px rgba(0,0,0,.7);}
 .card:disabled{opacity:.5;cursor:not-allowed;transform:none;}
 .card .cost{
   position:absolute;bottom:-12px;width:28px;height:28px;background:#e74c3c;
@@ -60,18 +72,11 @@ body{
   box-shadow:0 4px 8px rgba(0,0,0,.5);
 }
 
-/* Canvas */
-#game{
-  display:block; width:100%; height:100%; background:#1e3a5f;
-  image-rendering:pixelated;
-}
-
-/* Win */
+/* ---------- WIN ---------- */
 #win{
-  position:fixed; inset:0; display:flex; justify-content:center; align-items:center;
-  background:rgba(0,0,0,.9); font-size:3rem; font-weight:bold; color:#f1c40f;
-  text-shadow:0 0 20px #f1c40f; animation:pulse 1.5s infinite;
+  position:fixed;inset:0;display:flex;justify-content:center;align-items:center;
+  background:rgba(0,0,0,.9);font-size:3rem;font-weight:bold;color:#f1c40f;
+  text-shadow:0 0 20px #f1c40f;animation:pulse 1.5s infinite;
 }
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-
 .hidden{display:none!important}
