@@ -28,17 +28,18 @@
   ];
 
   // ---------- STATE ----------
-  let elixir = 8, elixirTimer = 0, aiTimer = 0;
+  let elixir = 8; // START AT 8
+  let elixirTimer = 0, aiTimer = 0;
   let hand = [], units = [];
 
-  // SPACED-OUT TOWERS
+  // FIXED & SPACED TOWERS
   const towers = [
-    {x:150,y:120,hp:TOWER.hp,team:1,cd:0,type:'princess'},
-    {x:150,y:480,hp:TOWER.hp,team:1,cd:0,type:'princess'},
-    {x:90,y:300,hp:KING.hp,team:1,cd:0,type:'king'},
-    {x:750,y:120,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
-    {x:750,y:480,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
-    {x:810,y:300,hp:KING.hp,team:-1,cd:0,type:'king'}
+    {x:140,y:120,hp:TOWER.hp,team:1,cd:0,type:'princess'},
+    {x:140,y:480,hp:TOWER.hp,team:1,cd:0,type:'princess'},
+    {x:80,y:300,hp:KING.hp,team:1,cd:0,type:'king'},
+    {x:760,y:120,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
+    {x:760,y:480,hp:TOWER.hp,team:-1,cd:0,type:'princess'},
+    {x:820,y:300,hp:KING.hp,team:-1,cd:0,type:'king'}
   ];
   let last = 0;
 
@@ -46,6 +47,7 @@
   document.getElementById('play').onclick = () => {
     startMenu.classList.add('hidden');
     ui.classList.remove('hidden');
+    document.getElementById('elixir-fill').style.width = '80%';
     initCards();
     requestAnimationFrame(loop);
   };
@@ -58,7 +60,7 @@
     btn.style.setProperty('--card2', `var(--card${index+1}-2)`);
     btn.innerHTML = `<div>${cardData.name}</div><div class="cost">${cardData.cost}</div>`;
     btn.onclick = () => spawnPlayer(cardData, index);
-    btn.disabled = true;
+    btn.disabled = elixir < cardData.cost;
     return btn;
   }
 
@@ -71,7 +73,6 @@
       hand.push(idx);
       div.appendChild(createCardBtn(CARDS[idx], i));
     }
-    updateElixir();
   }
 
   function updateElixir(){
@@ -97,7 +98,7 @@
     elixir-=card.cost;
     const lane = Math.random()<0.5?0:1;
     const y = lane===0?180:420;
-    units.push({...card,x:80,y:y+Math.random()*80,team:1,hp:card.maxHp,cd:0});
+    units.push({...card,x:60,y:y+Math.random()*80,team:1,hp:card.maxHp,cd:0});
     replaceCard(handIdx);
     updateElixir();
   }
@@ -108,7 +109,7 @@
       const c = CARDS[Math.floor(Math.random()*CARDS.length)];
       const lane = Math.random()<0.5?0:1;
       const y = lane===0?180:420;
-      units.push({...c,x:820,y:y+Math.random()*80,team:-1,hp:c.maxHp,cd:0});
+      units.push({...c,x:840,y:y+Math.random()*80,team:-1,hp:c.maxHp,cd:0});
       aiTimer=0;
     }
   }
@@ -202,4 +203,8 @@
     win.classList.remove('hidden');
     setTimeout(()=>location.reload(),4000);
   }
+
+  // === ADMIN LINK ===
+  window.game = { units, towers, elixir, updateElixir, CARDS };
+  console.log("%c ADMIN: Open /admin.html", "color:#f1c40f;font-size:14px");
 })();
