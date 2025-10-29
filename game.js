@@ -8,7 +8,7 @@
   const status = document.getElementById('status');
 
   // Socket.io (replace with your Heroku URL)
-  const socket = io('https://your-heroku-app.herokuapp.com'); // CHANGE THIS
+  const socket = io('https://thatoneclash-server.onrender.com'); // CHANGE THIS
 
   // Resize
   const resize = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
