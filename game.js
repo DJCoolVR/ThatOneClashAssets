@@ -28,7 +28,7 @@
   ];
 
   // ---------- STATE ----------
-  let elixir = 0, elixirTimer = 0, aiTimer = 0;
+  let elixir = 8, elixirTimer = 0, aiTimer = 0;
   let hand = [], units = [];
 
   // SPACED-OUT TOWERS
