@@ -2,8 +2,13 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const startMenu = document.getElementById('start-menu');
+  const lobby = document.getElementById('lobby');
   const ui = document.getElementById('ui');
   const win = document.getElementById('win');
+  const status = document.getElementById('status');
+
+  // Socket.io (replace with your Heroku URL)
+  const socket = io('https://your-heroku-app.herokuapp.com'); // CHANGE THIS
 
   // Resize
   const resize = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
@@ -28,11 +33,12 @@
   ];
 
   // ---------- STATE ----------
-  let elixir = 8; // START AT 8
+  let elixir = 8;
   let elixirTimer = 0, aiTimer = 0;
-  let hand = [], units = [];
+  let hand = [], units = [], remoteUnits = []; // Remote for multiplayer
+  let isMultiplayer = false, isAI = true; // Fallback to AI
 
-  // FIXED & SPACED TOWERS
+  // FIXED TOWERS
   const towers = [
     {x:140,y:120,hp:TOWER.hp,team:1,cd:0,type:'princess'},
     {x:140,y:480,hp:TOWER.hp,team:1,cd:0,type:'princess'},
@@ -43,13 +49,41 @@
   ];
   let last = 0;
 
+  // ---------- MULTIPLAYER ----------
+  function joinRoom() {
+    const roomCode = document.getElementById('room-code').value.toUpperCase().padStart(4, '0');
+    if (roomCode.length !== 4) return alert('Room code must be 4 digits');
+    socket.emit('join', roomCode);
+    status.textContent = 'Connecting...';
+  }
+
+  socket.on('joined', (data) => {
+    lobby.classList.add('hidden');
+    ui.classList.remove('hidden');
+    isMultiplayer = true;
+    initCards();
+    status.textContent = `Room: ${data.room} | Opponent: ${data.opponent ? 'Online' : 'AI Fallback'}`;
+    if (!data.opponent) setTimeout(() => { isAI = true; status.textContent += ' (AI Mode)'; }, 30000); // Fallback after 30s
+    requestAnimationFrame(loop);
+  });
+
+  socket.on('state', (state) => {
+    remoteUnits = state.units || [];
+  });
+
+  socket.on('spawn', (unit) => {
+    units.push(unit); // Opponent spawn
+  });
+
+  // Send spawn to server
+  function sendSpawn(card, x, y) {
+    socket.emit('spawn', { card, x, y });
+  }
+
   // ---------- START ----------
   document.getElementById('play').onclick = () => {
     startMenu.classList.add('hidden');
-    ui.classList.remove('hidden');
-    document.getElementById('elixir-fill').style.width = '80%';
-    initCards();
-    requestAnimationFrame(loop);
+    lobby.classList.remove('hidden');
   };
 
   // ---------- CARD UI ----------
@@ -98,12 +132,15 @@
     elixir-=card.cost;
     const lane = Math.random()<0.5?0:1;
     const y = lane===0?180:420;
-    units.push({...card,x:60,y:y+Math.random()*80,team:1,hp:card.maxHp,cd:0});
+    const unit = {...card,x:60,y:y+Math.random()*80,team:1,hp:card.maxHp,cd:0};
+    units.push(unit);
+    if (isMultiplayer) sendSpawn(card, 60, y); // Send to server
     replaceCard(handIdx);
     updateElixir();
   }
 
   function spawnAI(){
+    if (isMultiplayer && !isAI) return; // Skip if multiplayer
     aiTimer+=0.016;
     if(aiTimer>AI_SPAWN.min+Math.random()*(AI_SPAWN.max-AI_SPAWN.min)){
       const c = CARDS[Math.floor(Math.random()*CARDS.length)];
@@ -129,12 +166,13 @@
 
     spawnAI();
 
-    // Units
+    // Update local units
     units = units.filter(u=>u.hp>0);
     units.forEach(u=>{
       if(u.cd>0) u.cd-=dt;
       let target=null, minD=u.range||50;
-      units.forEach(e=>{if(e.team===u.team)return;
+      // Target remote or local enemies
+      [...units, ...remoteUnits].forEach(e=>{if(e.team===u.team)return;
         const d=Math.hypot(u.x-e.x,u.y-e.y);
         if(d<minD){minD=d;target=e;}
       });
@@ -151,11 +189,11 @@
       }
     });
 
-    // Towers
+    // Towers (local only, sync via server)
     towers.forEach(t=>{
       if(t.hp<=0 || t.cd>0){t.cd-=dt;return;}
       let target=null, minD = t.type==='king'?KING.range:TOWER.range;
-      units.forEach(u=>{if(u.team===t.team)return;
+      [...units, ...remoteUnits].forEach(u=>{if(u.team===t.team)return;
         const d=Math.hypot(t.x-u.x,t.y-u.y);
         if(d<minD){minD=d;target=u;}
       });
@@ -165,7 +203,7 @@
       }
     });
 
-    // Draw
+    // Draw local + remote
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle='#8b5a2b'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle='#2980b9'; ctx.fillRect(canvas.width/2-40,0,80,canvas.height);
@@ -182,8 +220,18 @@
       ctx.fillStyle='#27ae60'; ctx.fillRect(t.x-40,t.y-65,80*ratio,10);
     });
 
+    // Draw local units
     units.forEach(u=>{
       ctx.fillStyle = u.color;
+      ctx.beginPath(); ctx.arc(u.x,u.y,u.r,0,Math.PI*2); ctx.fill();
+      const ratio = u.hp/u.maxHp;
+      ctx.fillStyle='#c0392b'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2,6);
+      ctx.fillStyle='#27ae60'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2*ratio,6);
+    });
+
+    // Draw remote units (opponent)
+    remoteUnits.forEach(u=>{
+      ctx.fillStyle = '#ff6b6b'; // Opponent color
       ctx.beginPath(); ctx.arc(u.x,u.y,u.r,0,Math.PI*2); ctx.fill();
       const ratio = u.hp/u.maxHp;
       ctx.fillStyle='#c0392b'; ctx.fillRect(u.x-u.r,u.y-u.r-14,u.r*2,6);
@@ -201,6 +249,7 @@
   function end(msg){
     win.textContent=msg;
     win.classList.remove('hidden');
+    socket.emit('end', msg); // Notify server
     setTimeout(()=>location.reload(),4000);
   }
 
