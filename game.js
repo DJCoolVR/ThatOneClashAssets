@@ -1,6 +1,6 @@
 // ————————————————————————————
-// ThatOneClash – Chromebook Edition
-// Press \ to open admin (iamadmin)
+// ThatOneClash – FULL FIXED VERSION
+// Old Map | \ Admin | Infinite Elixir | Big AI Button
 // ————————————————————————————
 
 const canvas = document.getElementById('game');
@@ -17,13 +17,20 @@ let roomCode = '';
 let playerSide = 'bottom';
 let elixir = 10;
 let maxElixir = 10;
-let elixirRegen = setInterval(() => { if (elixir < maxElixir) { elixir++; updateElixir(); } }, 1500);
+let infiniteElixir = false;
+let elixirRegen = setInterval(() => {
+  if (!infiniteElixir && elixir < maxElixir) {
+    elixir++;
+    updateElixir();
+  }
+}, 1500);
 
+// Towers
 const towers = {
-  left: { x: 150, y: 250, hp: 1000, side: 'player' },
-  right: { x: 650, y: 250, hp: 1000, side: 'player' },
-  enemyLeft: { x: 150, y: 350, hp: 1000, side: 'enemy' },
-  enemyRight: { x: 650, y: 350, hp: 1000, side: 'enemy' }
+  left: { x: 150, y: 400, hp: 1000, side: 'player' },
+  right: { x: 650, y: 400, hp: 1000, side: 'player' },
+  enemyLeft: { x: 150, y: 200, hp: 1000, side: 'enemy' },
+  enemyRight: { x: 650, y: 200, hp: 1000, side: 'enemy' }
 };
 const units = [];
 
@@ -112,16 +119,25 @@ function createCards() {
     const div = document.createElement('div');
     div.className = 'card';
     div.textContent = card.name;
-    div.onclick = () => { if (elixir >= card.cost) { elixir -= card.cost; updateElixir(); card.spawn(); } };
+    div.onclick = () => {
+      if (infiniteElixir || elixir >= card.cost) {
+        if (!infiniteElixir) elixir -= card.cost;
+        updateElixir();
+        card.spawn();
+      }
+    };
     cardsDiv.appendChild(div);
   });
 }
 
 function updateElixir() {
   document.getElementById('elixir-fill').style.width = (elixir / maxElixir) * 100 + '%';
-  document.getElementById('elixir-text').textContent = `${elixir}/${maxElixir}`;
+  document.getElementById('elixir-text').textContent = infiniteElixir ? '∞/10' : `${elixir}/${maxElixir}`;
 }
 
+// ————————————————————————————
+// SPAWN UNIT
+// ————————————————————————————
 function spawnUnit(type) {
   const unit = {
     type,
@@ -171,6 +187,11 @@ function cheat(action, param) {
 
   if (action === 'elixir') {
     elixir = maxElixir = 10;
+    infiniteElixir = false;
+    updateElixir();
+  }
+  if (action === 'inf') {
+    infiniteElixir = !infiniteElixir;
     updateElixir();
   }
   if (action === 'spawn') {
@@ -190,19 +211,34 @@ function cheat(action, param) {
 }
 
 // ————————————————————————————
-// GAME LOOP
+// GAME LOOP + OLD MAP
 // ————————————————————————————
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // OLD MAP: Brown arena
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // River
+  ctx.fillStyle = '#3498db';
+  ctx.fillRect(0, 280, canvas.width, 40);
+
+  // Bridges
+  ctx.fillStyle = '#D2691E';
+  ctx.fillRect(200, 270, 100, 60);
+  ctx.fillRect(500, 270, 100, 60);
+
+  // Towers
   Object.values(towers).forEach(t => {
     ctx.fillStyle = t.hp > 0 ? '#f1c40f' : '#666';
     ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
     ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
+    ctx.font = '14px Arial';
     ctx.fillText(`${t.hp}`, t.x - 15, t.y - 45);
   });
 
+  // Units
   units.forEach(u => {
     ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
     ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
