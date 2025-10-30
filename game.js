@@ -1,6 +1,6 @@
 // ————————————————————————————
-// ThatOneClash – FULL FIXED VERSION
-// Old Map | \ Admin | Infinite Elixir | Big AI Button
+// ThatOneClash – FULL GAME LOGIC
+// Card Images + Elixir Cost + Admin (\)
 // ————————————————————————————
 
 const canvas = document.getElementById('game');
@@ -25,7 +25,6 @@ let elixirRegen = setInterval(() => {
   }
 }, 1500);
 
-// Towers
 const towers = {
   left: { x: 150, y: 400, hp: 1000, side: 'player' },
   right: { x: 650, y: 400, hp: 1000, side: 'player' },
@@ -34,11 +33,11 @@ const towers = {
 };
 const units = [];
 
-// Cards
+// CARD DATA WITH REAL IMAGES
 const cards = [
-  { name: 'Knight', cost: 3, spawn: () => spawnUnit('knight') },
-  { name: 'Archer', cost: 3, spawn: () => spawnUnit('archer') },
-  { name: 'Giant', cost: 5, spawn: () => spawnUnit('giant') }
+  { name: 'Knight', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('knight') },
+  { name: 'Archer', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('archer') },
+  { name: 'Giant',  cost: 5, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('giant') }
 ];
 
 // ————————————————————————————
@@ -66,14 +65,7 @@ document.getElementById('ai-mode').onclick = () => {
 
   setInterval(() => {
     if (isAI) {
-      const aiUnit = {
-        type: 'knight',
-        x: 400,
-        y: 100,
-        side: 'enemy',
-        hp: 100,
-        speed: 1
-      };
+      const aiUnit = { type: 'knight', x: 400, y: 100, side: 'enemy', hp: 100, speed: 1 };
       units.push(aiUnit);
       socket.emit('spawn', aiUnit);
     }
@@ -90,14 +82,8 @@ socket.on('joined', (data) => {
   initGame();
 });
 
-socket.on('ai-fallback', () => {
-  isAI = true;
-});
-
-socket.on('spawn', (unit) => {
-  units.push(unit);
-});
-
+socket.on('ai-fallback', () => { isAI = true; });
+socket.on('spawn', (unit) => { units.push(unit); });
 socket.on('end', (msg) => {
   document.getElementById('win').textContent = msg;
   document.getElementById('win').classList.remove('hidden');
@@ -118,11 +104,13 @@ function createCards() {
   cards.forEach((card) => {
     const div = document.createElement('div');
     div.className = 'card';
-    div.textContent = card.name;
+    div.innerHTML = `
+      <img src="${card.img}" alt="${card.name}">
+      <div class="cost">${card.cost}</div>
+    `;
     div.onclick = () => {
       if (infiniteElixir || elixir >= card.cost) {
-        if (!infiniteElixir) elixir -= card.cost;
-        updateElixir();
+        if (!infiniteElixir) { elixir -= card.cost; updateElixir(); }
         card.spawn();
       }
     };
@@ -135,9 +123,6 @@ function updateElixir() {
   document.getElementById('elixir-text').textContent = infiniteElixir ? '∞/10' : `${elixir}/${maxElixir}`;
 }
 
-// ————————————————————————————
-// SPAWN UNIT
-// ————————————————————————————
 function spawnUnit(type) {
   const unit = {
     type,
@@ -152,10 +137,9 @@ function spawnUnit(type) {
 }
 
 // ————————————————————————————
-// ADMIN: Press \ (backslash)
+// ADMIN PANEL (\ key)
 // ————————————————————————————
 let isAdmin = false;
-
 document.addEventListener('keydown', (e) => {
   if (e.key === '\\') {
     e.preventDefault();
@@ -164,46 +148,26 @@ document.addEventListener('keydown', (e) => {
 });
 
 function openAdmin() {
-  if (isAdmin) {
-    toggleCheat();
-    return;
-  }
-
+  if (isAdmin) { toggleCheat(); return; }
   const code = prompt('Admin Code:');
   if (code === 'iamadmin') {
     isAdmin = true;
     toggleCheat();
-    alert('Admin mode activated!');
+    alert('Admin mode ON!');
   }
 }
 
 function toggleCheat() {
-  const panel = document.getElementById('cheat-panel');
-  panel.classList.toggle('hidden');
+  document.getElementById('cheat-panel').classList.toggle('hidden');
 }
 
 function cheat(action, param) {
   if (!isAdmin) return;
-
-  if (action === 'elixir') {
-    elixir = maxElixir = 10;
-    infiniteElixir = false;
-    updateElixir();
-  }
-  if (action === 'inf') {
-    infiniteElixir = !infiniteElixir;
-    updateElixir();
-  }
-  if (action === 'spawn') {
-    spawnUnit(param);
-  }
-  if (action === 'tower') {
-    if (param === 'left') towers.enemyLeft.hp = 0;
-    if (param === 'right') towers.enemyRight.hp = 0;
-  }
-  if (action === 'win') {
-    socket.emit('end', 'ADMIN WIN');
-  }
+  if (action === 'elixir') { elixir = maxElixir = 10; infiniteElixir = false; updateElixir(); }
+  if (action === 'inf') { infiniteElixir = !infiniteElixir; updateElixir(); }
+  if (action === 'spawn') { spawnUnit(param); }
+  if (action === 'tower') { if (param === 'left') towers.enemyLeft.hp = 0; if (param === 'right') towers.enemyRight.hp = 0; }
+  if (action === 'win') { socket.emit('end', 'ADMIN WIN'); }
   if (action === 'ai') {
     isAI = !isAI;
     document.getElementById('ai-status').textContent = isAI ? 'AI MODE: ON' : 'AI MODE: OFF';
@@ -216,7 +180,7 @@ function cheat(action, param) {
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // OLD MAP: Brown arena
+  // Brown ground
   ctx.fillStyle = '#8B4513';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
