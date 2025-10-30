@@ -48,6 +48,20 @@
     <button id="back-home">BACK TO HOME</button>
   </div>
 
+  <!-- ADMIN PANEL (DRAGGABLE) -->
+  <div id="cheat-panel" class="hidden">
+    <div id="panel-header">ADMIN PANEL</div>
+    <div id="panel-body">
+      <button onclick="cheat('elixir')">Max Elixir</button>
+      <button onclick="cheat('inf')">Infinite Elixir</button>
+      <button onclick="cheat('gold')">+1000 Gold</button>
+      <button onclick="cheat('win')">Win</button>
+      <button onclick="cheat('ai')">Toggle AI</button>
+      <button onclick="spawnMegaKnights()">Spawn 10 Mega Knights</button>
+      <button onclick="toggleCheat()">Close</button>
+    </div>
+  </div>
+
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="game.js"></script>
 </body>
