@@ -32,40 +32,4 @@ function render() {
   renderPool(); loadDeck();
 }
 function renderPool() {
-  const p = document.getElementById('card-pool'); p.innerHTML = '';
-  cardPool.forEach(c => {
-    const d = document.createElement('div'); d.className = 'card-pool-item';
-    d.innerHTML = `<div>${c.name}</div><div class="cost">${c.cost}</div>`;
-    d.onclick = () => add(c);
-    p.appendChild(d);
-  });
-}
-function add(c) {
-  const e = Array.from(document.querySelectorAll('.deck-slot')).find(s => !s.dataset.card);
-  if (e) { e.dataset.card = JSON.stringify(c); e.innerHTML = `<div>${c.name}</div><div class="cost">${c.cost}</div>`; }
-}
-function remove(i) {
-  const s = document.querySelectorAll('.deck-slot')[i];
-  delete s.dataset.card; s.innerHTML = '';
-}
-function loadDeck() {
-  const d = localStorage.getItem('currentDeck');
-  if (d) JSON.parse(d).forEach((c,i) => {
-    const s = document.querySelectorAll('.deck-slot')[i];
-    if (s) { s.dataset.card = JSON.stringify(c); s.innerHTML = `<div>${c.name}</div><div class="cost">${c.cost}</div>`; }
-  });
-}
-document.getElementById('save-deck').onclick = () => {
-  const deck = Array.from(document.querySelectorAll('.deck-slot'))
-    .map(s => s.dataset.card ? JSON.parse(s.dataset.card) : null)
-    .filter(Boolean);
-  if (deck.length < 4) return alert('Need 4+ cards!');
-  localStorage.setItem('currentDeck', JSON.stringify(deck));
-  alert('Saved!');
-};
-document.getElementById('clear-deck').onclick = () => {
-  document.querySelectorAll('.deck-slot').forEach(s => { delete s.dataset.card; s.innerHTML=''; });
-};
-document.getElementById('back-to-game').onclick = () => window.location.href = 'index.html';
-
-render();
+  const p = document.getE
