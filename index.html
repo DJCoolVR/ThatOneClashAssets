@@ -4,8 +4,68 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ThatOneClash</title>
-  <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <style>
+    /* ————— GENERAL ————— */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #2c3e50; color: white; font-family: 'Bangers', cursive; text-align: center; overflow: hidden; }
+    .hidden { display: none !important; }
+
+    /* ————— START MENU ————— */
+    #start-menu { padding-top: 10vh; }
+    .crown { font-size: 4rem; margin-bottom: 1rem; }
+    h1 { font-size: 3.5rem; margin: 1rem 0; text-shadow: 0 0 10px #f1c40f; }
+    .tap { font-size: 1.5rem; margin: 1rem 0; color: #f1c40f; }
+
+    /* BUTTON GROUP */
+    .button-group {
+      display: flex; gap: 1.5rem; margin: 2rem auto; width: 80%; max-width: 600px;
+    }
+    .button-group button {
+      flex: 1; padding: 1.5rem; font-size: 1.8rem; background: #e74c3c; color: white;
+      border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .button-group button:hover { background: #c0392b; transform: translateY(-3px); }
+    #ai-mode { background: #2ecc71; }
+    #ai-mode:hover { background: #27ae60; }
+
+    /* ————— LOBBY ————— */
+    #lobby { padding: 2rem; }
+    #lobby input { padding: 1rem; font-size: 1.2rem; width: 80%; max-width: 400px; margin: 1rem 0; border-radius: 10px; }
+    #join-room { padding: 1rem 2rem; font-size: 1.2rem; background: #3498db; border: none; border-radius: 10px; cursor: pointer; }
+
+    /* ————— GAME UI ————— */
+    #ui { position: absolute; top: 0; width: 100%; padding: 1rem; background: rgba(0,0,0,0.7); display: flex; justify-content: space-between; align-items: center; }
+    #elixir-bar { width: 200px; height: 40px; background: #333; border-radius: 20px; overflow: hidden; position: relative; border: 3px solid #f1c40f; }
+    #elixir-fill { height: 100%; width: 100%; background: linear-gradient(to right, #9b59b6, #f1c40f); transition: width 0.3s; }
+    #elixir-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; font-weight: bold; color: white; text-shadow: 0 0 5px #000; }
+    #cards { display: flex; gap: 1rem; }
+    .card {
+      width: 80px; height: 100px; background: #f1c40f; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 0.7rem; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 3px solid #000; color: #000; font-weight: bold;
+      position: relative;
+    }
+    .card img { width: 50px; height: 50px; object-fit: contain; }
+    .card .cost { position: absolute; bottom: 5px; font-size: 1rem; color: #fff; background: #000; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; }
+    .card:hover { transform: scale(1.05); }
+
+    /* ————— WIN ————— */
+    #win { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #f1c40f; text-shadow: 0 0 20px #000; }
+
+    /* ————— ADMIN PANEL ————— */
+    #cheat-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95); padding: 2rem; border: 4px solid #f1c40f; border-radius: 20px;
+      text-align: center; z-index: 999; color: #f1c40f; max-width: 90%;
+    }
+    #cheat-panel h3 { margin-bottom: 1rem; font-size: 2rem; text-shadow: 0 0 10px #f1c40f; }
+    #cheat-panel button {
+      margin: 0.5rem; padding: 0.8rem 1.2rem; background: #e74c3c; color: white;
+      border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem;
+    }
+    #cheat-panel button:hover { background: #c0392b; transform: scale(1.05); }
+  </style>
 </head>
 <body>
 
@@ -59,6 +119,212 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="game.js"></script>
+  <script>
+    // ————————————————————————————
+    // ThatOneClash – FULL WITH CARD IMAGES
+    // ————————————————————————————
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800;
+    canvas.height = 600;
+
+    const socket = io('https://thatoneclash-server.onrender.com', { transports: ['websocket'] });
+
+    let isAI = false;
+    let roomCode = '';
+    let playerSide = 'bottom';
+    let elixir = 10;
+    let maxElixir = 10;
+    let infiniteElixir = false;
+    let elixirRegen = setInterval(() => {
+      if (!infiniteElixir && elixir < maxElixir) { elixir++; updateElixir(); }
+    }, 1500);
+
+    const towers = {
+      left: { x: 150, y: 400, hp: 1000, side: 'player' },
+      right: { x: 650, y: 400, hp: 1000, side: 'player' },
+      enemyLeft: { x: 150, y: 200, hp: 1000, side: 'enemy' },
+      enemyRight: { x: 650, y: 200, hp: 1000, side: 'enemy' }
+    };
+    const units = [];
+
+    // CARD DATA WITH IMAGES
+    const cards = [
+      { name: 'Knight', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('knight') },
+      { name: 'Archer', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('archer') },
+      { name: 'Giant',  cost: 5, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('giant') }
+    ];
+
+    // ————————————————————————————
+    // START MENU
+    // ————————————————————————————
+    document.getElementById('play').onclick = () => {
+      document.getElementById('start-menu').classList.add('hidden');
+      document.getElementById('lobby').classList.remove('hidden');
+    };
+
+    document.getElementById('join-room').onclick = () => {
+      roomCode = document.getElementById('room-input').value.trim() || '1234';
+      socket.emit('join', roomCode);
+    };
+
+    // ————————————————————————————
+    // AI MODE
+    // ————————————————————————————
+    document.getElementById('ai-mode').onclick = () => {
+      isAI = true;
+      playerSide = 'bottom';
+      document.getElementById('start-menu').classList.add('hidden');
+      document.getElementById('ui').classList.remove('hidden');
+      initGame();
+
+      setInterval(() => {
+        if (isAI) {
+          const aiUnit = { type: 'knight', x: 400, y: 100, side: 'enemy', hp: 100, speed: 1 };
+          units.push(aiUnit);
+          socket.emit('spawn', aiUnit);
+        }
+      }, 5000);
+    };
+
+    // ————————————————————————————
+    // SOCKET.IO
+    // ————————————————————————————
+    socket.on('joined', (data) => {
+      playerSide = data.opponent ? 'top' : 'bottom';
+      document.getElementById('lobby').classList.add('hidden');
+      document.getElementById('ui').classList.remove('hidden');
+      initGame();
+    });
+
+    socket.on('ai-fallback', () => { isAI = true; });
+    socket.on('spawn', (unit) => { units.push(unit); });
+    socket.on('end', (msg) => {
+      document.getElementById('win').textContent = msg;
+      document.getElementById('win').classList.remove('hidden');
+    });
+
+    // ————————————————————————————
+    // GAME INIT
+    // ————————————————————————————
+    function initGame() {
+      createCards();
+      updateElixir();
+      gameLoop();
+    }
+
+    function createCards() {
+      const cardsDiv = document.getElementById('cards');
+      cardsDiv.innerHTML = '';
+      cards.forEach((card) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <img src="${card.img}" alt="${card.name}">
+          <div class="cost">${card.cost}</div>
+        `;
+        div.onclick = () => {
+          if (infiniteElixir || elixir >= card.cost) {
+            if (!infiniteElixir) { elixir -= card.cost; updateElixir(); }
+            card.spawn();
+          }
+        };
+        cardsDiv.appendChild(div);
+      });
+    }
+
+    function updateElixir() {
+      document.getElementById('elixir-fill').style.width = (elixir / maxElixir) * 100 + '%';
+      document.getElementById('elixir-text').textContent = infiniteElixir ? '∞/10' : `${elixir}/${maxElixir}`;
+    }
+
+    function spawnUnit(type) {
+      const unit = {
+        type, x: playerSide === 'bottom' ? 400 : 400,
+        y: playerSide === 'bottom' ? 500 : 100,
+        side: playerSide === 'bottom' ? 'player' : 'enemy',
+        hp: 100, speed: 1
+      };
+      units.push(unit);
+      socket.emit('spawn', unit);
+    }
+
+    // ————————————————————————————
+    // ADMIN PANEL (\ key)
+    // ————————————————————————————
+    let isAdmin = false;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '\\') {
+        e.preventDefault();
+        openAdmin();
+      }
+    });
+
+    function openAdmin() {
+      if (isAdmin) { toggleCheat(); return; }
+      const code = prompt('Admin Code:');
+      if (code === 'iamadmin') {
+        isAdmin = true;
+        toggleCheat();
+        alert('Admin mode ON!');
+      }
+    }
+
+    function toggleCheat() {
+      document.getElementById('cheat-panel').classList.toggle('hidden');
+    }
+
+    function cheat(action, param) {
+      if (!isAdmin) return;
+      if (action === 'elixir') { elixir = maxElixir = 10; infiniteElixir = false; updateElixir(); }
+      if (action === 'inf') { infiniteElixir = !infiniteElixir; updateElixir(); }
+      if (action === 'spawn') { spawnUnit(param); }
+      if (action === 'tower') { if (param === 'left') towers.enemyLeft.hp = 0; if (param === 'right') towers.enemyRight.hp = 0; }
+      if (action === 'win') { socket.emit('end', 'ADMIN WIN'); }
+      if (action === 'ai') {
+        isAI = !isAI;
+        document.getElementById('ai-status').textContent = isAI ? 'AI MODE: ON' : 'AI MODE: OFF';
+      }
+    }
+
+    // ————————————————————————————
+    // GAME LOOP + OLD MAP
+    // ————————————————————————————
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Brown ground
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // River
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(0, 280, canvas.width, 40);
+
+      // Bridges
+      ctx.fillStyle = '#D2691E';
+      ctx.fillRect(200, 270, 100, 60);
+      ctx.fillRect(500, 270, 100, 60);
+
+      // Towers
+      Object.values(towers).forEach(t => {
+        ctx.fillStyle = t.hp > 0 ? '#f1c40f' : '#666';
+        ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
+        ctx.fillStyle = '#000';
+        ctx.font = '14px Arial';
+        ctx.fillText(`${t.hp}`, t.x - 15, t.y - 45);
+      });
+
+      // Units
+      units.forEach(u => {
+        ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
+        ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
+        u.y += u.side === 'player' ? -u.speed : u.speed;
+      });
+
+      requestAnimationFrame(gameLoop);
+    }
+  </script>
 </body>
 </html>
