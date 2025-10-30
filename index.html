@@ -9,28 +9,32 @@
 </head>
 <body>
 
-  <!-- HOME / DECK BUILDER -->
+  <!-- HOME SCREEN -->
   <div id="home">
     <div class="crown">Crown</div>
     <h1>ThatOneClash</h1>
-    <p class="tap">BUILD YOUR DECK</p>
-
-    <div id="deck-builder">
-      <input type="text" id="deck-name" placeholder="Deck name" />
-      <div id="deck-slots"></div>
-      <button id="save-deck">Save Deck</button>
-      <button id="clear-deck">Clear Deck</button>
-    </div>
-
-    <div id="card-pool"></div>
-
+    <p class="tap">TAP TO PLAY</p>
     <div class="button-group">
-      <button id="play-deck">PLAY WITH THIS DECK</button>
-      <button id="ai-mode">AI MODE (Random)</button>
+      <button id="play">BATTLE!</button>
+      <button id="ai-mode">AI MODE</button>
     </div>
+    <button id="deck-builder-btn" class="bottom-btn">Deck Builder</button>
   </div>
 
-  <!-- LOBBY (multiplayer) -->
+  <!-- DECK BUILDER -->
+  <div id="deck-builder" class="hidden">
+    <h2>DECK BUILDER</h2>
+    <input type="text" id="deck-name" placeholder="Deck name" />
+    <div id="deck-slots"></div>
+    <button id="save-deck">Save Deck</button>
+    <button id="clear-deck">Clear Deck</button>
+    <button id="back-home-deck">Back</button>
+
+    <h3>Card Collection</h3>
+    <div id="card-pool"></div>
+  </div>
+
+  <!-- LOBBY (MULTIPLAYER) -->
   <div id="lobby" class="hidden">
     <h2>Multiplayer</h2>
     <input type="text" id="room-input" placeholder="Room Code (e.g. 1234)" />
@@ -48,6 +52,7 @@
       <div id="elixir-text">10/10</div>
     </div>
     <div id="cards"></div>
+    <div id="gold-display">Gold: <span id="gold">1000</span></div>
   </div>
 
   <!-- WIN CELEBRATION -->
@@ -55,7 +60,6 @@
     <h2>YOU WIN!</h2>
     <canvas id="fireworks"></canvas>
     <button id="back-home">BACK TO HOME</button>
-    <p id="auto-restart" style="color:#f1c40f; margin-top:1rem;">Restarting in 5s...</p>
   </div>
 
   <!-- ADMIN PANEL -->
@@ -63,10 +67,7 @@
     <h3>ADMIN CHEATS</h3>
     <button onclick="cheat('elixir')">Max Elixir</button>
     <button onclick="cheat('inf')">Infinite Elixir</button>
-    <button onclick="cheat('spawn', 'knight')">Spawn Knight</button>
-    <button onclick="cheat('spawn', 'archer')">Spawn Archer</button>
-    <button onclick="cheat('tower', 'left')">Destroy Left Tower</button>
-    <button onclick="cheat('tower', 'right')">Destroy Right Tower</button>
+    <button onclick="cheat('gold')">+1000 Gold</button>
     <button onclick="cheat('win')">Win Instantly</button>
     <button onclick="cheat('ai')">Toggle AI Mode</button>
     <button onclick="toggleCheat()">Close</button>
