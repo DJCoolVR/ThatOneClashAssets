@@ -11,32 +11,14 @@ h1 { font-size: 3.5rem; margin: 1rem 0; text-shadow: 0 0 10px #f1c40f; }
 
 /* BUTTON GROUP */
 .button-group {
-  display: flex;
-  gap: 1.5rem;
-  margin: 2rem auto;
-  width: 80%;
-  max-width: 600px;
+  display: flex; gap: 1.5rem; margin: 2rem auto; width: 80%; max-width: 600px;
 }
 .button-group button {
-  flex: 1;
-  padding: 1.5rem;
-  font-size: 1.8rem;
-  background: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 15px;
-  cursor: pointer;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+  flex: 1; padding: 1.5rem; font-size: 1.8rem; background: #e74c3c; color: white;
+  border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 6px 12px rgba(0,0,0,0.4);
 }
-.button-group button:hover {
-  background: #c0392b;
-  transform: translateY(-3px);
-}
-#ai-mode {
-  background: #2ecc71;
-  font-size: 1.8rem;
-  padding: 1.5rem;
-}
+.button-group button:hover { background: #c0392b; transform: translateY(-3px); }
+#ai-mode { background: #2ecc71; }
 #ai-mode:hover { background: #27ae60; }
 
 /* ————— LOBBY ————— */
@@ -50,37 +32,27 @@ h1 { font-size: 3.5rem; margin: 1rem 0; text-shadow: 0 0 10px #f1c40f; }
 #elixir-fill { height: 100%; width: 100%; background: linear-gradient(to right, #9b59b6, #f1c40f); transition: width 0.3s; }
 #elixir-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; font-weight: bold; color: white; text-shadow: 0 0 5px #000; }
 #cards { display: flex; gap: 1rem; }
-.card { width: 80px; height: 100px; background: #f1c40f; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 3px solid #000; }
+.card {
+  width: 80px; height: 100px; background: #f1c40f; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 3px solid #000;
+}
+.card img { width: 50px; height: 50px; object-fit: contain; }
+.card .cost { position: absolute; bottom: 5px; font-size: 1rem; color: #fff; background: #000; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; }
 .card:hover { transform: scale(1.05); }
 
 /* ————— WIN ————— */
 #win { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #f1c40f; text-shadow: 0 0 20px #000; }
 
-/* ————— CHEAT PANEL ————— */
+/* ————— ADMIN PANEL ————— */
 #cheat-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.95);
-  padding: 2rem;
-  border: 4px solid #f1c40f;
-  border-radius: 20px;
-  text-align: center;
-  z-index: 999;
-  color: #f1c40f;
-  max-width: 90%;
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95); padding: 2rem; border: 4px solid #f1c40f; border-radius: 20px;
+  text-align: center; z-index: 999; color: #f1c40f; max-width: 90%;
 }
 #cheat-panel h3 { margin-bottom: 1rem; font-size: 2rem; text-shadow: 0 0 10px #f1c40f; }
 #cheat-panel button {
-  margin: 0.5rem;
-  padding: 0.8rem 1.2rem;
-  background: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1rem;
+  margin: 0.5rem; padding: 0.8rem 1.2rem; background: #e74c3c; color: white;
+  border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem;
 }
 #cheat-panel button:hover { background: #c0392b; transform: scale(1.05); }
