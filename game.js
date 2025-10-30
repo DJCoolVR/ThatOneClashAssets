@@ -1,6 +1,6 @@
 // ————————————————————————————
-// ThatOneClash – FULL GAME LOGIC
-// Card Images + Elixir Cost + Admin (\)
+// ThatOneClash – FULL WORKING
+// Combat + Card Cycle + Real Images
 // ————————————————————————————
 
 const canvas = document.getElementById('game');
@@ -31,13 +31,16 @@ const towers = {
   enemyLeft: { x: 150, y: 200, hp: 1000, side: 'enemy' },
   enemyRight: { x: 650, y: 200, hp: 1000, side: 'enemy' }
 };
-const units = [];
 
-// CARD DATA WITH REAL IMAGES
-const cards = [
-  { name: 'Knight', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('knight') },
-  { name: 'Archer', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('archer') },
-  { name: 'Giant',  cost: 5, img: 'https://i.imgur.com/5wG5l3A.png', spawn: () => spawnUnit('giant') }
+const units = [];
+let playerDeck = [];
+let nextCard = 0;
+
+// CARD POOL
+const cardPool = [
+  { name: 'Knight', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', type: 'knight' },
+  { name: 'Archer', cost: 3, img: 'https://i.imgur.com/5wG5l3A.png', type: 'archer' },
+  { name: 'Giant',  cost: 5, img: 'https://i.imgur.com/5wG5l3A.png', type: 'giant' }
 ];
 
 // ————————————————————————————
@@ -53,9 +56,6 @@ document.getElementById('join-room').onclick = () => {
   socket.emit('join', roomCode);
 };
 
-// ————————————————————————————
-// AI MODE BUTTON
-// ————————————————————————————
 document.getElementById('ai-mode').onclick = () => {
   isAI = true;
   playerSide = 'bottom';
@@ -65,7 +65,7 @@ document.getElementById('ai-mode').onclick = () => {
 
   setInterval(() => {
     if (isAI) {
-      const aiUnit = { type: 'knight', x: 400, y: 100, side: 'enemy', hp: 100, speed: 1 };
+      const aiUnit = { type: 'knight', x: 400, y: 100, side: 'enemy', hp: 100, speed: 1, damage: 20 };
       units.push(aiUnit);
       socket.emit('spawn', aiUnit);
     }
@@ -73,7 +73,7 @@ document.getElementById('ai-mode').onclick = () => {
 };
 
 // ————————————————————————————
-// SOCKET.IO
+// SOCKET
 // ————————————————————————————
 socket.on('joined', (data) => {
   playerSide = data.opponent ? 'top' : 'bottom';
@@ -93,15 +93,24 @@ socket.on('end', (msg) => {
 // GAME INIT
 // ————————————————————————————
 function initGame() {
+  playerDeck = [];
+  for (let i = 0; i < 4; i++) {
+    playerDeck.push(getRandomCard());
+  }
+  nextCard = getRandomCard();
   createCards();
   updateElixir();
   gameLoop();
 }
 
+function getRandomCard() {
+  return { ...cardPool[Math.floor(Math.random() * cardPool.length)] };
+}
+
 function createCards() {
   const cardsDiv = document.getElementById('cards');
   cardsDiv.innerHTML = '';
-  cards.forEach((card) => {
+  playerDeck.forEach((card, i) => {
     const div = document.createElement('div');
     div.className = 'card';
     div.innerHTML = `
@@ -111,7 +120,10 @@ function createCards() {
     div.onclick = () => {
       if (infiniteElixir || elixir >= card.cost) {
         if (!infiniteElixir) { elixir -= card.cost; updateElixir(); }
-        card.spawn();
+        spawnUnit(card.type);
+        playerDeck[i] = nextCard;
+        nextCard = getRandomCard();
+        createCards();
       }
     };
     cardsDiv.appendChild(div);
@@ -130,14 +142,16 @@ function spawnUnit(type) {
     y: playerSide === 'bottom' ? 500 : 100,
     side: playerSide === 'bottom' ? 'player' : 'enemy',
     hp: 100,
-    speed: 1
+    speed: 1,
+    damage: 20,
+    target: null
   };
   units.push(unit);
   socket.emit('spawn', unit);
 }
 
 // ————————————————————————————
-// ADMIN PANEL (\ key)
+// ADMIN
 // ————————————————————————————
 let isAdmin = false;
 document.addEventListener('keydown', (e) => {
@@ -175,38 +189,55 @@ function cheat(action, param) {
 }
 
 // ————————————————————————————
-// GAME LOOP + OLD MAP
+// GAME LOOP + COMBAT
 // ————————————————————————————
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Brown ground
-  ctx.fillStyle = '#8B4513';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // River
-  ctx.fillStyle = '#3498db';
-  ctx.fillRect(0, 280, canvas.width, 40);
-
-  // Bridges
-  ctx.fillStyle = '#D2691E';
-  ctx.fillRect(200, 270, 100, 60);
-  ctx.fillRect(500, 270, 100, 60);
+  // Map
+  ctx.fillStyle = '#8B4513'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#3498db'; ctx.fillRect(0, 280, canvas.width, 40);
+  ctx.fillStyle = '#D2691E'; ctx.fillRect(200, 270, 100, 60); ctx.fillRect(500, 270, 100, 60);
 
   // Towers
   Object.values(towers).forEach(t => {
     ctx.fillStyle = t.hp > 0 ? '#f1c40f' : '#666';
     ctx.fillRect(t.x - 30, t.y - 40, 60, 80);
-    ctx.fillStyle = '#000';
-    ctx.font = '14px Arial';
+    ctx.fillStyle = '#000'; ctx.font = '14px Arial';
     ctx.fillText(`${t.hp}`, t.x - 15, t.y - 45);
   });
 
-  // Units
-  units.forEach(u => {
+  // Update & Draw Units
+  units.forEach((u, i) => {
+    // Find target
+    if (!u.target || u.target.hp <= 0) {
+      const enemies = units.filter(e => e.side !== u.side && e.hp > 0);
+      const enemyTowers = Object.values(towers).filter(t => t.side !== u.side && t.hp > 0);
+      u.target = enemies[0] || enemyTowers[0] || null;
+    }
+
+    // Move
+    if (u.target) {
+      const dx = u.target.x - u.x;
+      const dy = u.target.y - u.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 40) {
+        u.x += (dx / dist) * u.speed;
+        u.y += (dy / dist) * u.speed;
+      } else if (u.target.hp > 0) {
+        u.target.hp -= u.damage;
+        if (u.target.hp <= 0) u.target = null;
+      }
+    } else {
+      u.y += u.side === 'player' ? -u.speed : u.speed;
+    }
+
+    // Draw
     ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
     ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
-    u.y += u.side === 'player' ? -u.speed : u.speed;
+
+    // Remove dead
+    if (u.hp <= 0) units.splice(i, 1);
   });
 
   requestAnimationFrame(gameLoop);
