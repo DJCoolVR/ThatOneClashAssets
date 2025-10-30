@@ -9,18 +9,28 @@
 </head>
 <body>
 
-  <!-- START MENU -->
-  <div id="start-menu">
+  <!-- HOME / DECK BUILDER -->
+  <div id="home">
     <div class="crown">Crown</div>
     <h1>ThatOneClash</h1>
-    <p class="tap">TAP TO PLAY</p>
+    <p class="tap">BUILD YOUR DECK</p>
+
+    <div id="deck-builder">
+      <input type="text" id="deck-name" placeholder="Deck name" />
+      <div id="deck-slots"></div>
+      <button id="save-deck">Save Deck</button>
+      <button id="clear-deck">Clear Deck</button>
+    </div>
+
+    <div id="card-pool"></div>
+
     <div class="button-group">
-      <button id="play">BATTLE!</button>
-      <button id="ai-mode">AI MODE</button>
+      <button id="play-deck">PLAY WITH THIS DECK</button>
+      <button id="ai-mode">AI MODE (Random)</button>
     </div>
   </div>
 
-  <!-- LOBBY -->
+  <!-- LOBBY (multiplayer) -->
   <div id="lobby" class="hidden">
     <h2>Multiplayer</h2>
     <input type="text" id="room-input" placeholder="Room Code (e.g. 1234)" />
@@ -40,8 +50,12 @@
     <div id="cards"></div>
   </div>
 
-  <!-- WIN SCREEN -->
-  <div id="win" class="hidden">YOU WIN!</div>
+  <!-- WIN CELEBRATION -->
+  <div id="win" class="hidden">
+    <h2>YOU WIN!</h2>
+    <canvas id="fireworks"></canvas>
+    <button id="back-home">Back to Home</button>
+  </div>
 
   <!-- ADMIN PANEL -->
   <div id="cheat-panel" class="hidden">
