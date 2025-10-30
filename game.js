@@ -1,4 +1,4 @@
-// ====================== ThatOneClash – FIXED 100% ======================
+// ====================== ThatOneClash – MEGA KNIGHT + DUST ======================
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -18,6 +18,9 @@ let units = [], towers = {
 };
 
 const BRIDGE_Y = 320;
+
+// DUST PARTICLES
+let dustParticles = [];
 
 // CARD POOL
 const cardPool = [
@@ -50,7 +53,7 @@ function loadDeck() {
   return saved ? JSON.parse(saved) : cardPool.slice(0,4);
 }
 
-// ADMIN PANEL
+// ADMIN
 let isAdmin = false;
 let isDragging = false, dragOffset = {x:0, y:0};
 const panel = document.getElementById('cheat-panel');
@@ -63,18 +66,11 @@ document.addEventListener('keydown', e => {
 function openAdmin() {
   if (isAdmin) { toggleCheat(); return; }
   const p = prompt('Admin Code:');
-  if (p === 'iamadmin') {
-    isAdmin = true;
-    toggleCheat();
-    alert('Admin ON');
-  }
+  if (p === 'iamadmin') { isAdmin = true; toggleCheat(); alert('Admin ON'); }
 }
 
-function toggleCheat() {
-  panel.classList.toggle('hidden');
-}
+function toggleCheat() { panel.classList.toggle('hidden'); }
 
-// DRAG LOGIC
 header.addEventListener('mousedown', e => {
   if (!isAdmin) return;
   isDragging = true;
@@ -92,7 +88,6 @@ document.addEventListener('mousemove', e => {
 
 document.addEventListener('mouseup', () => { isDragging = false; });
 
-// CHEATS
 function cheat(action) {
   if (!isAdmin) return;
   if (action === 'elixir') { elixir = maxElixir; updateElixir(); }
@@ -105,27 +100,37 @@ function spawnMegaKnights() {
   if (!isAdmin) return;
   for (let i = 0; i < 10; i++) {
     const u = {
-      type: 'megaknight',
-      x: 200 + i * 40,
-      y: playerSide === 'bottom' ? 550 : 50,
+      type: 'megaknight', x: 200 + i * 40, y: playerSide === 'bottom' ? 550 : 50,
       side: playerSide === 'bottom' ? 'player' : 'enemy',
-      hp: 500, speed: 0.9, damage: 1, target: null, path: 'start'
+      hp: 500, speed: 0.9, damage: 1, target: null, path: 'start', jump: 0
     };
-    units.push(u);
-    socket.emit('spawn', u);
+    units.push(u); socket.emit('spawn', u);
+  }
+}
+
+// DUST ON LAND
+function createDust(x, y) {
+  for (let i = 0; i < 15; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 3;
+    dustParticles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      life: 20 + Math.random() * 20,
+      size: 2 + Math.random() * 3
+    });
   }
 }
 
 // GAME LOGIC
 document.getElementById('deck-builder-btn').onclick = () => window.location.href = 'deck.html';
-
 document.getElementById('play').onclick = () => {
   playerDeck = loadDeck();
   nextCard = getRandomCard();
   document.getElementById('home').classList.add('hidden');
   document.getElementById('lobby').classList.remove('hidden');
 };
-
 document.getElementById('ai-mode').onclick = () => {
   isAI = true; playerSide = 'bottom';
   playerDeck = loadDeck();
@@ -145,7 +150,6 @@ socket.on('joined', () => {
   nextCard = getRandomCard();
   startGame();
 });
-
 socket.on('spawn', u => units.push(u));
 socket.on('end', msg => showWin(msg));
 
@@ -153,7 +157,7 @@ function startGame() {
   document.getElementById('lobby').classList.add('hidden');
   document.getElementById('ui').classList.remove('hidden');
   gameRunning = true; gameWon = false;
-  units = []; resetTowers();
+  units = []; dustParticles = []; resetTowers();
   createCards(); updateElixir(); gameLoop();
 }
 
@@ -179,7 +183,7 @@ function createCards() {
         createCards();
       }
     };
-    div.appendChild(el);
+    div.appendChild(e);
   });
 }
 
@@ -192,7 +196,8 @@ function spawnUnit(card) {
   const u = {
     type: card.type, x: 400, y: playerSide === 'bottom' ? 550 : 50,
     side: playerSide === 'bottom' ? 'player' : 'enemy',
-    hp: card.hp, speed: card.speed, damage: card.damage, target: null, path: 'start'
+    hp: card.hp, speed: card.speed, damage: card.damage, target: null, path: 'start',
+    jump: 0
   };
   units.push(u); socket.emit('spawn', u);
 }
@@ -200,11 +205,32 @@ function spawnUnit(card) {
 function aiSpawn() {
   if (!isAI || !gameRunning) return;
   const c = cardPool[Math.floor(Math.random() * cardPool.length)];
-  const u = { type: c.type, x: 400, y: 50, side: 'enemy', hp: c.hp, speed: c.speed, damage: c.damage, target: null, path: 'start' };
+  const u = { type: c.type, x: 400, y: 50, side: 'enemy', hp: c.hp, speed: c.speed, damage: c.damage, target: null, path: 'start', jump: 0 };
   units.push(u); socket.emit('spawn', u);
 }
 
+// MEGA KNIGHT JUMP + DUST
 function moveOnPath(u) {
+  if (u.type === 'megaknight' && u.path === 'start') {
+    if ((u.side === 'player' && u.y <= BRIDGE_Y + 80) || (u.side === 'enemy' && u.y >= BRIDGE_Y - 80)) {
+      if (!u.jump) u.jump = 1;
+    }
+  }
+
+  if (u.jump > 0 && u.jump <= 30) {
+    u.jump++;
+    if (u.jump === 16) {
+      // LAND → CREATE DUST
+      createDust(u.x, u.y + 20);
+      if (u.side === 'player') u.y = BRIDGE_Y - 50;
+      else u.y = BRIDGE_Y + 50;
+      u.path = 'tower';
+    }
+    return;
+  } else if (u.jump > 30) {
+    u.jump = 0;
+  }
+
   if (u.path === 'start') {
     if (u.side === 'player') { u.y -= u.speed; if (u.y <= BRIDGE_Y + 20) u.path = 'bridge'; }
     else { u.y += u.speed; if (u.y >= BRIDGE_Y - 20) u.path = 'bridge'; }
@@ -238,7 +264,7 @@ document.getElementById('back-home').onclick = () => {
   document.getElementById('win').classList.add('hidden');
   document.getElementById('home').classList.remove('hidden');
   gameWon = false; gameRunning = false;
-  units = []; resetTowers();
+  units = []; dustParticles = []; resetTowers();
 };
 
 // FIREWORKS
@@ -290,16 +316,49 @@ function gameLoop() {
     ctx.fillText(t.hp, t.x-15, t.y-45);
   });
 
+  // DUST
+  dustParticles.forEach((p, i) => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life--;
+    if (p.life <= 0) { dustParticles.splice(i,1); return; }
+    ctx.fillStyle = `rgba(139,69,19,${p.life/40})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+  });
+
   // Units
   units.forEach((u,i) => {
     moveOnPath(u);
+
     if (u.type === 'megaknight') {
+      const jumpPhase = u.jump;
+      let scale = 1;
+      let shadowY = u.y + 25;
+      let shadowSize = 30;
+
+      if (jumpPhase > 0 && jumpPhase <= 30) {
+        const t = jumpPhase / 15;
+        scale = 1 + 0.5 * Math.sin(t * Math.PI);
+        shadowSize = 30 * (1 - t * 0.6);
+        shadowY = u.y + 25 + t * 60;
+      }
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(u.x, shadowY, shadowSize, shadowSize * 0.3, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      // Mega Knight
+      ctx.save();
+      ctx.translate(u.x, u.y);
+      ctx.scale(scale, scale);
       ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(u.x, u.y, 20, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
     } else {
       ctx.fillStyle = u.side === 'player' ? '#3498db' : '#e74c3c';
       ctx.fillRect(u.x-15,u.y-15,30,30);
     }
+
     if (u.hp <= 0) units.splice(i,1);
   });
 
@@ -312,7 +371,6 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Elixir
 setInterval(() => {
   if (gameRunning && !infiniteElixir && elixir < maxElixir) {
     elixir++; updateElixir();
