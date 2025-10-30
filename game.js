@@ -1,4 +1,4 @@
-// ====================== ThatOneClash – FULL WITH DECK BUILDER & WIN CELEBRATION ======================
+// ====================== ThatOneClash – FULL + WIN SCREEN FIXED ======================
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -17,7 +17,11 @@ let units = [], towers = {
   enemyRight:{ x:650, y:200, hp:1000, side:'enemy' }
 };
 
-// ---------- 21 REAL CARD IMAGES ----------
+let restartTimer = null;
+
+// ————————————————————————————
+// 21 REAL CLASH ROYALE CARDS
+// ————————————————————————————
 const cardPool = [
   {name:'Knight',cost:3,img:'https://i.imgur.com/0Q3n8gA.png',type:'knight',hp:100,damage:25,speed:1},
   {name:'Archer',cost:3,img:'https://i.imgur.com/3lP7i3k.png',type:'archer',hp:60,damage:15,speed:1.2},
@@ -42,7 +46,9 @@ const cardPool = [
   {name:'Golem',cost:8,img:'https://i.imgur.com/5wG5l3A.png',type:'golem',hp:600,damage:50,speed:0.6}
 ];
 
-// ---------- DECK BUILDER ----------
+// ————————————————————————————
+// DECK BUILDER
+// ————————————————————————————
 function initDeckBuilder() {
   const slots = document.getElementById('deck-slots');
   slots.innerHTML = '';
@@ -54,7 +60,6 @@ function initDeckBuilder() {
     slots.appendChild(slot);
   }
   renderCardPool();
-  loadSavedDecks();
 }
 function renderCardPool() {
   const pool = document.getElementById('card-pool');
@@ -97,10 +102,12 @@ document.getElementById('clear-deck').onclick = () => {
   document.querySelectorAll('.deck-slot').forEach(s => { delete s.dataset.card; s.innerHTML=''; });
 };
 
-// ---------- PLAY WITH CUSTOM DECK ----------
+// ————————————————————————————
+// PLAY / AI / MULTI
+// ————————————————————————————
 document.getElementById('play-deck').onclick = () => {
   const deck = getCurrentDeck();
-  if (deck.length < 4) return alert('You need at least 4 cards!');
+  if (deck.length < 4) return alert('Need 4+ cards!');
   playerDeck = deck.slice(0,4);
   nextCard = getRandomFromDeck(deck);
   startGame();
@@ -108,8 +115,6 @@ document.getElementById('play-deck').onclick = () => {
 function getRandomFromDeck(deck) {
   return {...deck[Math.floor(Math.random()*deck.length)]};
 }
-
-// ---------- AI MODE (random) ----------
 document.getElementById('ai-mode').onclick = () => {
   isAI = true; playerSide = 'bottom';
   playerDeck = []; for(let i=0;i<4;i++) playerDeck.push(getRandomCard());
@@ -117,8 +122,6 @@ document.getElementById('ai-mode').onclick = () => {
   startGame();
   setInterval(aiSpawn, 4000);
 };
-
-// ---------- MULTIPLAYER ----------
 document.getElementById('join-room').onclick = () => {
   roomCode = document.getElementById('room-input').value.trim() || '1234';
   socket.emit('join', roomCode);
@@ -133,21 +136,34 @@ socket.on('ai-fallback',()=>{isAI=true;});
 socket.on('spawn',u=>{units.push(u);});
 socket.on('end',msg=>{ showWin(msg); });
 
-// ---------- GAME START ----------
+// ————————————————————————————
+// GAME START
+// ————————————————————————————
 function startGame() {
   document.getElementById('home').classList.add('hidden');
   document.getElementById('lobby').classList.add('hidden');
   document.getElementById('ui').classList.remove('hidden');
   gameRunning = true; gameWon = false;
+  units = []; resetTowers();
   createCards(); updateElixir(); gameLoop();
+}
+function resetTowers() {
+  Object.values(towers).forEach(t => t.hp = 1000);
 }
 function createCards() {
   const div = document.getElementById('cards'); div.innerHTML='';
   playerDeck.forEach((c,i)=>{
     const el = document.createElement('div'); el.className='card';
     el.innerHTML=`<img src="${c.img}" onerror="this.src='https://i.imgur.com/5wG5l3A.png'"><div class="cost">${c.cost}</div>`;
-    el.onclick=()=>{ if(infiniteElixir||elixir>=c.cost){ if(!infiniteElixir){elixir-=c.cost;updateElixir();}
-      spawnUnit(c); playerDeck[i]=nextCard; nextCard=getRandomFromDeck(getCurrentDeck()||cardPool); createCards(); }};
+    el.onclick=()=>{ 
+      if(infiniteElixir||elixir>=c.cost){ 
+        if(!infiniteElixir){elixir-=c.cost;updateElixir();}
+        spawnUnit(c); 
+        playerDeck[i]=nextCard; 
+        nextCard=getRandomFromDeck(getCurrentDeck()||cardPool); 
+        createCards(); 
+      }
+    };
     div.appendChild(el);
   });
 }
@@ -162,7 +178,9 @@ function spawnUnit(card){
 }
 function getRandomCard(){ return {...cardPool[Math.floor(Math.random()*cardPool.length)]}; }
 
-// ---------- ADMIN ----------
+// ————————————————————————————
+// ADMIN
+// ————————————————————————————
 let isAdmin=false;
 document.addEventListener('keydown',e=>{ if(e.key==='\\'){e.preventDefault();openAdmin();}});
 function openAdmin(){ if(isAdmin){toggleCheat();return;} const p=prompt('Admin Code:'); if(p==='iamadmin'){isAdmin=true;toggleCheat();alert('Admin ON');}}
@@ -177,60 +195,79 @@ function cheat(a,p){
   if(a==='ai'){isAI=!isAI;document.getElementById('ai-status').textContent=isAI?'AI ON':'AI OFF';}
 }
 
-// ---------- WIN CELEBRATION ----------
+// ————————————————————————————
+// WIN CELEBRATION (NO STUCK)
+// ————————————————————————————
 function showWin(msg){
-  if(gameWon) return; gameWon=true; gameRunning=false;
+  if(gameWon) return;
+  gameWon = true; gameRunning = false;
   document.getElementById('ui').classList.add('hidden');
   document.getElementById('win').classList.remove('hidden');
   document.querySelector('#win h2').textContent = msg;
   startFireworks();
+
+  // Auto restart in 5s
+  let count = 5;
+  const timerEl = document.getElementById('auto-restart');
+  timerEl.textContent = `Restarting in ${count}s...`;
+  restartTimer = setInterval(() => {
+    count--;
+    timerEl.textContent = `Restarting in ${count}s...`;
+    if (count <= 0) backToHome();
+  }, 1000);
 }
-document.getElementById('back-home').onclick = () => {
+document.getElementById('back-home').onclick = backToHome;
+function backToHome() {
+  clearInterval(restartTimer);
   document.getElementById('win').classList.add('hidden');
   document.getElementById('home').classList.remove('hidden');
-  units=[]; gameWon=false; gameRunning=false;
+  gameWon = false; gameRunning = false;
+  units = []; resetTowers();
   initDeckBuilder();
-};
+}
 
-// ---------- FIREWORKS ----------
+// ————————————————————————————
+// FIREWORKS
+// ————————————————————————————
 const fwCanvas = document.getElementById('fireworks');
 const fwCtx = fwCanvas.getContext('2d');
-fwCanvas.width = window.innerWidth; fwCanvas.height = window.innerHeight*0.6;
+fwCanvas.width = window.innerWidth; fwCanvas.height = window.innerHeight * 0.6;
 let particles = [];
 function startFireworks(){
-  particles=[];
-  setInterval(createFirework,250);
+  particles = [];
+  setInterval(createFirework, 300);
   requestAnimationFrame(fwLoop);
 }
 function createFirework(){
-  const x = fwCanvas.width*Math.random();
-  const y = fwCanvas.height*Math.random()*0.6;
-  const hue = Math.random()*360;
-  for(let i=0;i<80;i++){
+  const x = fwCanvas.width * Math.random();
+  const y = fwCanvas.height * Math.random() * 0.6;
+  const hue = Math.random() * 360;
+  for(let i=0; i<80; i++){
     const angle = Math.PI*2*i/80;
-    const vel = 2+Math.random()*4;
+    const vel = 2 + Math.random()*4;
     particles.push({x,y,vx:Math.cos(angle)*vel,vy:Math.sin(angle)*vel-3,life:80,color:`hsl(${hue},100%,50%)`});
   }
 }
 function fwLoop(){
+  if(!gameWon) return;
   fwCtx.fillStyle='rgba(0,0,0,0.2)'; fwCtx.fillRect(0,0,fwCanvas.width,fwCanvas.height);
   particles.forEach((p,i)=>{
     p.x+=p.vx; p.y+=p.vy; p.vy+=0.08; p.life--;
     if(p.life<=0){particles.splice(i,1);return;}
     fwCtx.fillStyle=p.color; fwCtx.fillRect(p.x-2,p.y-2,4,4);
   });
-  if(gameWon) requestAnimationFrame(fwLoop);
+  requestAnimationFrame(fwLoop);
 }
 
-// ---------- AI SPAWN ----------
+// ————————————————————————————
+// AI + GAME LOOP
+// ————————————————————————————
 function aiSpawn(){
   if(!isAI||!gameRunning) return;
   const c = cardPool[Math.floor(Math.random()*cardPool.length)];
   const u={type:c.type,x:400,y:100,side:'enemy',hp:c.hp,speed:c.speed,damage:c.damage,target:null};
   units.push(u); socket.emit('spawn',u);
 }
-
-// ---------- GAME LOOP ----------
 function gameLoop(){
   if(!gameRunning) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -275,5 +312,8 @@ function gameLoop(){
   requestAnimationFrame(gameLoop);
 }
 
-// ---------- INIT ----------
+// ————————————————————————————
+// INIT
+// ————————————————————————————
 initDeckBuilder();
+setInterval(() => { if(gameRunning && !infiniteElixir && elixir < maxElixir) { elixir++; updateElixir(); } }, 1500);
