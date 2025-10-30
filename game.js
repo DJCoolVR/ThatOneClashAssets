@@ -1,4 +1,4 @@
-// ====================== ThatOneClash – MEGA KNIGHT + DUST ======================
+// ====================== ThatOneClash – FULL PATH + COMBAT ======================
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -18,9 +18,23 @@ let units = [], towers = {
 };
 
 const BRIDGE_Y = 320;
-
-// DUST PARTICLES
 let dustParticles = [];
+
+// PATH POINTS
+const PATH = {
+  player: [
+    {x:400, y:550},  // spawn
+    {x:400, y:BRIDGE_Y + 50}, // bridge entry
+    {x:400, y:BRIDGE_Y - 50}, // bridge exit
+    {x:400, y:100}   // enemy base
+  ],
+  enemy: [
+    {x:400, y:50},
+    {x:400, y:BRIDGE_Y - 50},
+    {x:400, y:BRIDGE_Y + 50},
+    {x:400, y:500}
+  ]
+};
 
 // CARD POOL
 const cardPool = [
@@ -35,16 +49,10 @@ const cardPool = [
   {name:'Baby Dragon',cost:4,type:'babydragon',hp:100,damage:1,speed:1.1},
   {name:'Prince',cost:5,type:'prince',hp:180,damage:1,speed:1.2},
   {name:'Hog Rider',cost:4,type:'hogrider',hp:140,damage:1,speed:1.8},
-  {name:'Fireball',cost:4,type:'fireball',hp:0,damage:1,speed:0},
   {name:'Skeleton',cost:1,type:'skeleton',hp:30,damage:1,speed:1.4},
   {name:'Bomber',cost:3,type:'bomber',hp:60,damage:1,speed:1},
   {name:'P.E.K.K.A',cost:7,type:'pekka',hp:400,damage:1,speed:0.7},
   {name:'Minion',cost:3,type:'minion',hp:70,damage:1,speed:1.5},
-  {name:'Ice Wizard',cost:3,type:'icewizard',hp:70,damage:1,speed:1},
-  {name:'Electro Wizard',cost:4,type:'electrowiz',hp:80,damage:1,speed:1.1},
-  {name:'Sparky',cost:6,type:'sparky',hp:200,damage:1,speed:0.6},
-  {name:'Lava Hound',cost:7,type:'lavahound',hp:500,damage:1,speed:0.9},
-  {name:'Golem',cost:8,type:'golem',hp:600,damage:1,speed:0.6},
   {name:'Mega Knight',cost:7,type:'megaknight',hp:500,damage:1,speed:0.9}
 ];
 
@@ -102,13 +110,13 @@ function spawnMegaKnights() {
     const u = {
       type: 'megaknight', x: 200 + i * 40, y: playerSide === 'bottom' ? 550 : 50,
       side: playerSide === 'bottom' ? 'player' : 'enemy',
-      hp: 500, speed: 0.9, damage: 1, target: null, path: 'start', jump: 0
+      hp: 500, speed: 0.9, damage: 1, pathIndex: 0, jump: 0
     };
     units.push(u); socket.emit('spawn', u);
   }
 }
 
-// DUST ON LAND
+// DUST
 function createDust(x, y) {
   for (let i = 0; i < 15; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -183,7 +191,7 @@ function createCards() {
         createCards();
       }
     };
-    div.appendChild(e);
+    div.appendChild(el);
   });
 }
 
@@ -196,8 +204,8 @@ function spawnUnit(card) {
   const u = {
     type: card.type, x: 400, y: playerSide === 'bottom' ? 550 : 50,
     side: playerSide === 'bottom' ? 'player' : 'enemy',
-    hp: card.hp, speed: card.speed, damage: card.damage, target: null, path: 'start',
-    jump: 0
+    hp: card.hp, speed: card.speed, damage: card.damage,
+    pathIndex: 0, jump: 0
   };
   units.push(u); socket.emit('spawn', u);
 }
@@ -205,49 +213,91 @@ function spawnUnit(card) {
 function aiSpawn() {
   if (!isAI || !gameRunning) return;
   const c = cardPool[Math.floor(Math.random() * cardPool.length)];
-  const u = { type: c.type, x: 400, y: 50, side: 'enemy', hp: c.hp, speed: c.speed, damage: c.damage, target: null, path: 'start', jump: 0 };
+  const u = { type: c.type, x: 400, y: 50, side: 'enemy', hp: c.hp, speed: c.speed, damage: c.damage, pathIndex: 0, jump: 0 };
   units.push(u); socket.emit('spawn', u);
 }
 
-// MEGA KNIGHT JUMP + DUST
-function moveOnPath(u) {
-  if (u.type === 'megaknight' && u.path === 'start') {
-    if ((u.side === 'player' && u.y <= BRIDGE_Y + 80) || (u.side === 'enemy' && u.y >= BRIDGE_Y - 80)) {
-      if (!u.jump) u.jump = 1;
+// PATH FOLLOWING + COMBAT
+function moveUnit(u) {
+  // Find target (enemy unit first)
+  let target = null;
+  let minDist = Infinity;
+  units.forEach(other => {
+    if (other.side !== u.side && other.hp > 0) {
+      const dist = Math.hypot(other.x - u.x, other.y - u.y);
+      if (dist < minDist && dist < 80) {
+        minDist = dist;
+        target = other;
+      }
+    }
+  });
+
+  if (target) {
+    // Attack enemy unit
+    const dx = target.x - u.x;
+    const dy = target.y - u.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 30) {
+      u.x += (dx / dist) * u.speed;
+      u.y += (dy / dist) * u.speed;
+    } else {
+      target.hp -= u.damage;
+    }
+  } else {
+    // Follow path
+    const path = u.side === 'player' ? PATH.player : PATH.enemy;
+    if (u.pathIndex >= path.length) return;
+
+    const point = path[u.pathIndex];
+    const dx = point.x - u.x;
+    const dy = point.y - u.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 10) {
+      u.pathIndex++;
+      if (u.pathIndex >= path.length) {
+        // Attack tower
+        const enemyTowers = Object.values(towers).filter(t => t.side !== u.side && t.hp > 0);
+        if (enemyTowers.length > 0) {
+          const closest = enemyTowers.reduce((a,b) => 
+            Math.hypot(a.x-u.x,a.y-u.y) < Math.hypot(b.x-u.x,b.y-u.y) ? a : b
+          );
+          const tdx = closest.x - u.x;
+          const tdy = closest.y - u.y;
+          const tdist = Math.hypot(tdx, tdy);
+          if (tdist > 40) {
+            u.x += (tdx/tdist) * u.speed;
+            u.y += (tdy/tdist) * u.speed;
+          } else {
+            closest.hp -= u.damage;
+          }
+        }
+      }
+    } else {
+      u.x += (dx / dist) * u.speed;
+      u.y += (dy / dist) * u.speed;
+    }
+
+    // MEGA KNIGHT JUMP
+    if (u.type === 'megaknight' && u.pathIndex === 1 && !u.jump) {
+      if ((u.side === 'player' && u.y <= BRIDGE_Y + 80) || (u.side === 'enemy' && u.y >= BRIDGE_Y - 80)) {
+        u.jump = 1;
+      }
     }
   }
 
+  // JUMP ANIMATION
   if (u.jump > 0 && u.jump <= 30) {
     u.jump++;
     if (u.jump === 16) {
-      // LAND → CREATE DUST
       createDust(u.x, u.y + 20);
       if (u.side === 'player') u.y = BRIDGE_Y - 50;
       else u.y = BRIDGE_Y + 50;
-      u.path = 'tower';
+      u.pathIndex = 2;
     }
     return;
   } else if (u.jump > 30) {
     u.jump = 0;
-  }
-
-  if (u.path === 'start') {
-    if (u.side === 'player') { u.y -= u.speed; if (u.y <= BRIDGE_Y + 20) u.path = 'bridge'; }
-    else { u.y += u.speed; if (u.y >= BRIDGE_Y - 20) u.path = 'bridge'; }
-  }
-  else if (u.path === 'bridge') {
-    const targetX = 400;
-    if (Math.abs(u.x - targetX) > 5) u.x += (targetX - u.x) > 0 ? u.speed : -u.speed;
-    else u.path = 'tower';
-  }
-  else if (u.path === 'tower') {
-    const enemyT = Object.values(towers).filter(t => t.side !== u.side && t.hp > 0);
-    if (enemyT.length > 0) {
-      const closest = enemyT.reduce((a,b) => Math.hypot(a.x-u.x,a.y-u.y) < Math.hypot(b.x-u.x,b.y-u.y) ? a : b);
-      const dx = closest.x - u.x, dy = closest.y - u.y, dist = Math.hypot(dx, dy);
-      if (dist > 40) { u.x += (dx/dist)*u.speed; u.y += (dy/dist)*u.speed; }
-      else { closest.hp -= u.damage; }
-    }
   }
 }
 
@@ -316,7 +366,7 @@ function gameLoop() {
     ctx.fillText(t.hp, t.x-15, t.y-45);
   });
 
-  // DUST
+  // Dust
   dustParticles.forEach((p, i) => {
     p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life--;
     if (p.life <= 0) { dustParticles.splice(i,1); return; }
@@ -325,8 +375,8 @@ function gameLoop() {
   });
 
   // Units
-  units.forEach((u,i) => {
-    moveOnPath(u);
+  units.forEach((u, i) => {
+    moveUnit(u);
 
     if (u.type === 'megaknight') {
       const jumpPhase = u.jump;
