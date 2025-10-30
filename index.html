@@ -9,7 +9,7 @@
 </head>
 <body>
 
-  <!-- HOME SCREEN -->
+  <!-- HOME -->
   <div id="home">
     <div class="crown">Crown</div>
     <h1>ThatOneClash</h1>
@@ -18,28 +18,15 @@
       <button id="play">BATTLE!</button>
       <button id="ai-mode">AI MODE</button>
     </div>
-    <button id="deck-builder-btn" class="bottom-btn">Deck Builder</button>
+    <button id="deck-builder-btn" class="bottom-btn">DECKS</button>
   </div>
 
-  <!-- DECK BUILDER -->
-  <div id="deck-builder" class="hidden">
-    <h2>DECK BUILDER</h2>
-    <input type="text" id="deck-name" placeholder="Deck name" />
-    <div id="deck-slots"></div>
-    <button id="save-deck">Save Deck</button>
-    <button id="clear-deck">Clear Deck</button>
-    <button id="back-home-deck">Back</button>
-
-    <h3>Card Collection</h3>
-    <div id="card-pool"></div>
-  </div>
-
-  <!-- LOBBY (MULTIPLAYER) -->
+  <!-- LOBBY -->
   <div id="lobby" class="hidden">
     <h2>Multiplayer</h2>
-    <input type="text" id="room-input" placeholder="Room Code (e.g. 1234)" />
-    <button id="join-room">Join Room</button>
-    <p id="status">Waiting for opponent...</p>
+    <input type="text" id="room-input" placeholder="Room Code" />
+    <button id="join-room">Join</button>
+    <p id="status">Waiting...</p>
   </div>
 
   <!-- GAME -->
@@ -52,26 +39,13 @@
       <div id="elixir-text">10/10</div>
     </div>
     <div id="cards"></div>
-    <div id="gold-display">Gold: <span id="gold">1000</span></div>
   </div>
 
-  <!-- WIN CELEBRATION -->
+  <!-- WIN -->
   <div id="win" class="hidden">
     <h2>YOU WIN!</h2>
     <canvas id="fireworks"></canvas>
     <button id="back-home">BACK TO HOME</button>
-  </div>
-
-  <!-- ADMIN PANEL -->
-  <div id="cheat-panel" class="hidden">
-    <h3>ADMIN CHEATS</h3>
-    <button onclick="cheat('elixir')">Max Elixir</button>
-    <button onclick="cheat('inf')">Infinite Elixir</button>
-    <button onclick="cheat('gold')">+1000 Gold</button>
-    <button onclick="cheat('win')">Win Instantly</button>
-    <button onclick="cheat('ai')">Toggle AI Mode</button>
-    <button onclick="toggleCheat()">Close</button>
-    <p id="ai-status" style="color:#f1c40f; margin-top:1rem;"></p>
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
